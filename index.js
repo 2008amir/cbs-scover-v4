@@ -1367,26 +1367,59 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
 
 
 
-    const remote = (parts[0] || '').toLowerCase() === 'chat';
+    const mode = modeByCmd[cmd];
+    const first = (parts[0] || '').toLowerCase();
+
+    // A target can be given either as ".<cmd> chat <number> on" or simply as
+    // ".<cmd> <number> on".
+    const numberTarget = first !== 'chat' && /^[+\d][\d\s-]{6,}$/.test(parts[0] || '')
+        ? resolveTargetJid(parts[0])
+        : null;
+    const remote = first === 'chat' || !!numberTarget;
+
+    // LOVE_START status / active chat list.
+    if (mode === 'lovestart' && (!parts.length || first === 'status' || first === 'list')) {
+        const data = chatbotStore();
+        const modes = data?.modes || {};
+        const chats = data?.chats || {};
+        const active = Object.keys(modes).filter(j => modes[j] === 'lovestart' && chats[j] === true);
+        const hereOn = modes[from] === 'lovestart' && chats[from] === true;
+        const list = active.length
+            ? active.map(j => `│ • ${j.split('@')[0]}`).join('\n')
+            : '│ • none';
+        await EliteProTech.sendMessage(from, {
+            text: `╭─「 LOVE_START STATUS 」\n` +
+                `│ Here: ${hereOn ? '✅ ON' : '❌ OFF'}\n` +
+                `│ Active chats: ${active.length}\n` +
+                `│ Bot name: ${chatbotName()}\n` +
+                `│ Bot gender: ${chatbotGender(from) || 'male'} (talks to ${(chatbotGender(from) || 'male') === 'male' ? 'a woman' : 'a man'})\n` +
+                `├──────────────\n${list}\n╰──────────────\n\n` +
+                `${prefix}${cmd} help — full menu`
+        }, { quoted: mek });
+        return true;
+    }
+
     // Only the remote form and the LOVE_START toggles are handled here; the
     // existing local .chatbot on/off handling stays exactly as it was.
-    if (!remote && modeByCmd[cmd] !== 'lovestart') return false;
+    if (!remote && mode !== 'lovestart') return false;
     if (!isOwner) {
         await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
         return true;
     }
 
-    const mode = modeByCmd[cmd];
-    const target = remote ? resolveTargetJid(parts[1]) : from;
-    const action = (remote ? parts[2] : parts[0] || '').toLowerCase();
-    const extra = (remote ? parts[3] : parts[1] || '').toLowerCase();
+    const target = remote ? (numberTarget || resolveTargetJid(parts[1])) : from;
+    const offset = numberTarget ? 0 : (remote ? 1 : -1);
+    const action = String(parts[offset + 1] || '').toLowerCase();
+    const extra = String(parts[offset + 2] || '').toLowerCase();
 
     if (remote && !target) {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} chat 2349xxxxxxxxx on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} 2349xxxxxxxxx on/off` }, { quoted: mek });
         return true;
     }
     if (action !== 'on' && action !== 'off') {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd}${remote ? ' chat <number|groupid>' : ''} on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, {
+            text: `Use:\n${prefix}${cmd} on/off\n${prefix}${cmd} <number> on/off\n${prefix}${cmd} <number> on start\n${prefix}${cmd} help`
+        }, { quoted: mek });
         return true;
     }
     if (mode !== 'normal' && target.endsWith('@g.us')) {
@@ -1412,16 +1445,21 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     saveChatbotStore(data);
 
     const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
+    const activeCount = Object.keys(data.modes).filter(j => data.modes[j] === mode && data.chats[j] === true).length;
     await EliteProTech.sendMessage(from, {
-        text: `✅ Chatbot ${label} turned ${action.toUpperCase()} for ${target.split('@')[0]}`
+        text: `✅ Chatbot ${label} turned ${action.toUpperCase()} for ${target.split('@')[0]}` +
+            (mode === 'lovestart' ? `\nActive ${label} chats: ${activeCount}` : '')
     }, { quoted: mek });
 
-    if (action === 'on' && mode === 'lovestart' && extra === 'start') {
+    // ".<cmd> <number> on start" (and the ".. chat <number> on start" form):
+    // the bot writes the very first message itself.
+    if (action === 'on' && mode === 'lovestart' && (extra === 'start' || (remote && extra === 'start'))) {
         sendLoveStartOpener(EliteProTech, target).catch(err =>
             reportChatbotError(EliteProTech, target, mek, 'lovestart', err));
     }
     return true;
 };
+
 
 
 /* Side channel: sees EVERY message in the socket (including the owner's own

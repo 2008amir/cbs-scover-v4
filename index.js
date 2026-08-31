@@ -1457,7 +1457,12 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
 
 
 
-    const remote = (parts[0] || '').toLowerCase() === 'chat';
+    // Both syntaxes work: ".<cmd> chat <number> on" and ".<cmd> <number> on".
+    const remoteWord = (parts[0] || '').toLowerCase() === 'chat';
+    const numberFirst = !remoteWord
+        && !!resolveTargetJid(parts[0])
+        && ['on', 'off'].includes((parts[1] || '').toLowerCase());
+    const remote = remoteWord || numberFirst;
     // Only the remote form and the LOVE_START toggles are handled here; the
     // existing local .chatbot on/off handling stays exactly as it was.
     if (!remote && modeByCmd[cmd] !== 'lovestart') return false;
@@ -1467,16 +1472,17 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     }
 
     const mode = modeByCmd[cmd];
-    const target = remote ? resolveTargetJid(parts[1]) : from;
-    const action = (remote ? parts[2] : parts[0] || '').toLowerCase();
-    const extra = (remote ? parts[3] : parts[1] || '').toLowerCase();
+    const at = remoteWord ? 1 : 0;
+    const target = remote ? resolveTargetJid(parts[at]) : from;
+    const action = (remote ? parts[at + 1] : parts[0] || '').toLowerCase();
+    const extra = (remote ? parts[at + 2] : parts[1] || '').toLowerCase();
 
     if (remote && !target) {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} chat 2349xxxxxxxxx on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} 2349xxxxxxxxx on/off` }, { quoted: mek });
         return true;
     }
     if (action !== 'on' && action !== 'off') {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd}${remote ? ' chat <number|groupid>' : ''} on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd}${remote ? ' <number|groupid>' : ''} on/off` }, { quoted: mek });
         return true;
     }
     if (mode !== 'normal' && target.endsWith('@g.us')) {
@@ -1502,14 +1508,19 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     saveChatbotStore(data);
 
     const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
+    // LOVE_START always speaks first once it is switched on — "nostart" is the
+    // only way to activate it silently.
+    const willOpen = action === 'on' && mode === 'lovestart' && extra !== 'nostart';
     await EliteProTech.sendMessage(from, {
         text: `✅ Chatbot ${label} turned ${action.toUpperCase()} for ${target.split('@')[0]}`
+            + (willOpen ? '\n💬 Sending the first message now...' : '')
     }, { quoted: mek });
 
-    if (action === 'on' && mode === 'lovestart' && extra === 'start') {
+    if (willOpen) {
         sendLoveStartOpener(EliteProTech, target).catch(err =>
             reportChatbotError(EliteProTech, target, mek, 'lovestart', err));
     }
+
     return true;
 };
 

@@ -1265,16 +1265,17 @@ const OPENERS = {
 // whatever context exists in this chat, so it is never one of two fixed lines.
 // The hard-coded list is only a last-resort fallback if generation fails.
 async function sendLoveStartOpener(EliteProTech, target) {
-    const gender = chatbotGender(target) || 'female';
+    const gender = chatbotGender(target) || 'male';
     const name = chatbotName();
     let text = '';
     try {
         const prompt = `
-You are ${name}, ${gender === 'female' ? 'a woman' : 'a man'}, sending the VERY FIRST WhatsApp message to someone you have never spoken to before. You got their number from a friend / a group.
+You are ${name}, ${gender === 'female' ? 'a woman' : 'a man'}, sending the VERY FIRST WhatsApp message to ${gender === 'female' ? 'a man' : 'a woman'} you have never spoken to before. You got their number from a friend / a group.
 Write that opener only — nothing else, no quotes, no explanation.
 Rules: short (one line, at most two very short ones), friendly, natural, relaxed, appropriate for a first contact. Not romantic. Not a paragraph. No formal introduction letter.
-Say hi, and it's fine to give your name naturally. 0–1 emoji.
-Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, ya lafiya? 😊", "Heyy 👋 ya ake ciki?"
+Say hi, and it's fine to give your name naturally (you are ${name}). 0–1 emoji.
+Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, ya lafiya? 😊", "Heyy 👋 ${gender === 'female' ? 'ya kake?' : 'ya kike?'}"
+Never write "yaya kake"/"yaya kike" and never write "Yamma lafiya".
 Never invent how you got the number beyond "a friend"/"a group", and never claim you met before.
 ${hausaBlock()}
 
@@ -1286,9 +1287,10 @@ ${archiveBlock(target)}`.trim();
         console.error('opener generation failed:', err?.message || err);
     }
     if (!text) {
-        const list = OPENERS[gender] || OPENERS.female;
+        const list = OPENERS[gender] || OPENERS.male;
         text = list[Math.floor(Math.random() * list.length)].replace('{name}', name);
     }
+
     await pauseThenType(EliteProTech, target, text);
     await EliteProTech.sendMessage(target, { text });
     global.logChatMessage(target, 'You', text);

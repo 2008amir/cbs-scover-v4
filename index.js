@@ -1304,13 +1304,14 @@ function chatbotStatusText(mode) {
     const modes = data.modes || {};
     const mine = chats.filter(jid => (modes[jid] || 'normal') === mode);
     const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
-    const genderNote = mode === 'love' || mode === 'lovestart'
-        ? `\nChatting as: ${(data.genders && 'per-chat overrides possible') ? (data.loveGender || data.gender || (mode === 'lovestart' ? 'female (default)' : 'male (default)')) : ''}`
-        : '';
+    const showGender = mode === 'love' || mode === 'lovestart';
+    const gender = (mode === 'lovestart' ? (data.loveGender || data.gender || 'female (default)')
+        : (data.loveGender || data.gender || 'male (default)'));
     const list = mine.length
         ? mine.map((jid, i) => `│ ${i + 1}. ${jid.split('@')[0]}`).join('\n')
         : '│ (none)';
-    return `╭─「 ${label} STATUS 」\n│ Active chats: ${mine.length}\n│ All chatbot chats: ${chats.length}${genderNote ? `\n│ Chatting as: ${(mode === 'lovestart' ? (data.loveGender || data.gender || 'female (default)') : (data.loveGender || data.gender || 'male (default)'))}` : ''}\n├──────────────\n${list}\n╰──────────────`;
+    return `╭─「 ${label} STATUS 」\n│ Active chats: ${mine.length}\n│ All chatbot chats: ${chats.length}${showGender ? `\n│ Chatting as: ${gender}` : ''}\n├──────────────\n${list}\n╰──────────────`;
+
 }
 
 

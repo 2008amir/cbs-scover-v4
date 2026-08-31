@@ -319,16 +319,22 @@ function chatbotMode(chatJid) {
 
 // Gender the bot should chat as here: the per-chat override wins, otherwise
 // the global gender of the active personality.
+// LOVE_START defaults to a MALE bot talking to a FEMALE person.
 function chatbotGender(chatJid) {
     const data = chatbotStore();
     const perChat = data?.genders?.[chatJid];
     if (perChat === 'male' || perChat === 'female') return perChat;
     const mode = chatbotMode(chatJid);
-    const g = mode === 'love' || mode === 'lovestart'
+    if (mode === 'lovestart') {
+        const ls = data?.lovestartGender || data?.loveGender || data?.gender;
+        return ls === 'male' || ls === 'female' ? ls : 'male';
+    }
+    const g = mode === 'love'
         ? (data?.loveGender || data?.gender)
         : mode === 'friend' ? (data?.friendGender || data?.gender) : data?.gender;
     return g === 'male' || g === 'female' ? g : null;
 }
+
 global.chatbotGender = chatbotGender;
 
 

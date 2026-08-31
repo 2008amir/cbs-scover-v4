@@ -1105,7 +1105,16 @@ async function generateAndSend(EliteProTech, from, sender, mek, texts, audioPart
 
     // A failure here throws: nothing is sent to the chat, the caller logs it and
     // DMs the exact error to the owner.
-    const reply = await global.geminiChat(prompt, spoken, mediaParts);
+    const raw = await global.geminiChat(prompt, spoken, mediaParts);
+
+    // Deliberate silence: picture/voice/video requests and questions only the
+    // real human owner could answer get NO reply at all — nothing is sent and
+    // nothing is explained to the chat.
+    const reply = String(raw || '').replace(/\[NO_REPLY\]/gi, '').trim();
+    if (!reply || /\[NO_REPLY\]/i.test(String(raw || ''))) {
+        console.log(`chatbot stayed silent in ${from} (no-reply rule)`);
+        return;
+    }
 
 // Random 1/2/3 s pause, then typing for exactly characters × 0.3 s.
     await pauseThenType(EliteProTech, from, reply);
@@ -1115,6 +1124,7 @@ async function generateAndSend(EliteProTech, from, sender, mek, texts, audioPart
     global.logChatMessage(from, 'You', reply);
 
     await EliteProTech.sendMessage(from, { text: reply }, { quoted: mek });
+
 }
 
 

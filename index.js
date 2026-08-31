@@ -1262,6 +1262,58 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 ╰──────────────
 Typing time = characters × 0.3s. Errors never go to the chat — they come to you.`;
 
+const LOVESTART_HELP = `╭─「 LOVE_START 」
+│ Strangers → slow, natural growth
+│ The BOT speaks first, always.
+╰──────────────
+
+╭─「 COMMANDS 」
+│ .chatbot-love-start on / off
+│   └ this chat
+│ .chatbot-love-start <number> on / off
+│ .chatbot-love-start <number> on start
+│ .chatbot-love-start chat <number> on / off
+│   └ same thing, older syntax
+│ .chatbot-love-start <number> on nostart
+│   └ activate WITHOUT the first message
+│ .chatbot-love-start status
+│   └ active chats + how many
+│ .chatbot-love-start help
+╰──────────────
+
+╭─「 BEHAVIOUR 」
+│ 👩 Chats as a FEMALE by default
+│    (all other personalities: male)
+│ 💬 Sends the first message itself right
+│    after you activate a number
+│ 🕒 Knows the real time of day:
+│    morning  Ina kwana / good morning
+│    afternoon Ina yini / good afternoon
+│    evening  Barka da yamma / good evening
+│ 🤫 Stays completely silent when only a
+│    real human can answer (own photo,
+│    voice/video call, meeting, money,
+│    live location) — no excuse, no reply
+│ 🇳🇬 Full Hausa / English / Pidgin mixing
+╰──────────────
+Typing time = characters × 0.3s. Errors come to you, never to the chat.`;
+
+function chatbotStatusText(mode) {
+    const data = chatbotStore();
+    const chats = Object.keys(data.chats || {}).filter(jid => data.chats[jid] === true);
+    const modes = data.modes || {};
+    const mine = chats.filter(jid => (modes[jid] || 'normal') === mode);
+    const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
+    const genderNote = mode === 'love' || mode === 'lovestart'
+        ? `\nChatting as: ${(data.genders && 'per-chat overrides possible') ? (data.loveGender || data.gender || (mode === 'lovestart' ? 'female (default)' : 'male (default)')) : ''}`
+        : '';
+    const list = mine.length
+        ? mine.map((jid, i) => `│ ${i + 1}. ${jid.split('@')[0]}`).join('\n')
+        : '│ (none)';
+    return `╭─「 ${label} STATUS 」\n│ Active chats: ${mine.length}\n│ All chatbot chats: ${chats.length}${genderNote ? `\n│ Chatting as: ${(mode === 'lovestart' ? (data.loveGender || data.gender || 'female (default)') : (data.loveGender || data.gender || 'male (default)'))}` : ''}\n├──────────────\n${list}\n╰──────────────`;
+}
+
+
 // Last-resort fallbacks only (used if opener generation fails). Short, friendly,
 // first-contact appropriate, no romance and no invented history.
 const OPENERS = {

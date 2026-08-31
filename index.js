@@ -525,19 +525,19 @@ function emojiBlock(mode) {
     if (mode === 'love') {
         return `
 EMOJI STYLE — LOVE
-- Use emojis often and naturally: 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀
+- Use emojis often and naturally: 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀 😍 😝 😜 💞 💖 💕 🫶
 - Never one after every word. One or two per message, matching the actual feeling.`;
     }
     if (mode === 'lovestart') {
         return `
 EMOJI STYLE — LOVE_START
-- Use emojis naturally and regularly: 😊 😂 😄 🥰 ❤️ 🤍 😅 👀 ✨ (🥰/❤️ only once things are genuinely warm between you).
+- Use emojis naturally and regularly: 😊 😂 😄 🥰 ❤️ 🤍 😅 👀 ✨ 😍 😝 😜 💞 💖 💕 🫶(🥰,😍,💞, 💖, 💕, ❤️ only once things are genuinely warm between you).
 - Normally 0–2 emojis per message depending on the emotional context. Not after every sentence, and don't repeat the same emoji again and again.`;
     }
     if (mode === 'friend') {
         return `
 EMOJI STYLE — FRIEND
-- Mix plain text and emojis: 😂 😅 👌 🔥 💀 🙏 — some messages with, some without.`;
+- Mix plain text and emojis: 😂 😅 🫠 😝 😜 🥳 😫 🤣 💥👌 🔥 💀 🙏 — some messages with, some without.`;
     }
     return `
 EMOJI STYLE — NORMAL
@@ -659,7 +659,7 @@ HAUSA QUALITY
 Use simple, natural Nigerian Hausa. Priority: correct meaning, natural conversation, clear Hausa, appropriate vocabulary.
 Avoid literal machine translation, strange grammar, overly formal or textbook Hausa, random Hausa words, repetitive expressions.
 - Infer abbreviations from context: "Lpy lau allhmdl" = "Lafiya lau, Alhamdulillah"; "Ykk" is a casual "ya kake" type expression, not an unknown word; "Xaka" = "zaka".
-- "Masha Allah 😊. A huta da kyau mana." -> answer its real meaning directly.
+- "Masha Allah 😊. Asha hutu lpy." -> answer its real meaning directly.
 - "Mike damunka naji kana magana haka" -> answer what that sentence actually means, never an unrelated generic reply.
 
 MESSAGE LENGTH
@@ -1223,7 +1223,7 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 ╰──────────────
 
 ╭─「 EMOJI STYLE 」
-│ LOVE        frequent & natural 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀
+│ LOVE        frequent & natural 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀 😍 😝 😜 💞 💖 💕 🫶
 │ LOVE_START  warm and expressive, grows with closeness
 │ FRIEND      mix of plain text and emojis
 │ NORMAL      some messages with, some without
@@ -1320,7 +1320,7 @@ You are ${name}, ${gender === 'female' ? 'a woman' : 'a man'}, sending the VERY 
 Write that opener only — nothing else, no quotes, no explanation.
 Rules: short (one line, at most two very short ones), friendly, natural, relaxed, appropriate for a first contact. Not romantic. Not a paragraph. No formal introduction letter.
 Say hi, and it's fine to give your name naturally (you are ${name}). 0–1 emoji.
-Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, ya lafiya? 😊", "Heyy 👋 ${gender === 'female' ? 'ya kake?' : 'ya kike?'}"
+Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, kana lpy? 😊", "Heyy 👋 ${gender === 'female' ? 'ya kake?' : 'ya kike?'}"
 Never write "yaya kake"/"yaya kike" and never write "Yamma lafiya".
 Never invent how you got the number beyond "a friend"/"a group", and never claim you met before.
 ${hausaBlock()}

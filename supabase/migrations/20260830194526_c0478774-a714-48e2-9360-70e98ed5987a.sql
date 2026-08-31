@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.get_bot_api_keys(TEXT) FROM authenticated;

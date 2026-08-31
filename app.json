@@ -1,0 +1,121 @@
+{
+  "name": "CBS-SCOVER",
+  "description": "A WhatsApp Bot Created by codebreakers",
+  "logo": "https://i.ibb.co/jk0ynvbn/7a8c4b5b617fa11a1e9a61190f427546.jpg",
+  "keywords": [
+    "bot",
+    "whatsapp",
+    "baileys",
+    "javascript",
+    "codebreakers"
+  ],
+  "success_url": "/",
+  "stack": "heroku-24",
+  "env": {
+    "SESSION_ID": {
+      "description": "Put your SESSION_ID here.",
+      "value": ""
+    },
+    "GEMINI_API_KEY": {
+      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_KEY_2": {
+      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_KEY_3": {
+      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_KEY_4": {
+      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "value": "",
+      "required": false
+    },
+    "VIDEO_KNOWLEDGE_GEMINI_API_KEY": {
+      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "value": "",
+      "required": false
+    },
+    "YOUTUBE_API_KEY": {
+      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "value": "",
+      "required": false
+    },
+    "PREFIX": {
+      "description": "Bot command prefix (example: ., !, #)",
+      "value": "."
+    },
+    "OWNER_NUMBER": {
+      "description": "Owner's phone number in international format (without +).",
+      "value": "2349162748703"
+    },
+    "OWNER_NAME": {
+      "description": "Owner's display name.",
+      "value": "codebreakers"
+    },
+    "BOT_NAME": {
+      "description": "Bot display name.",
+      "value": "CBS-SCOVER"
+    },
+    "AUTO_RECORDING": {
+      "description": "Enable auto-recording simulation (true or false).",
+      "value": "false"
+    },
+    "AUTO_TYPING": {
+      "description": "Enable auto-typing simulation (true or false).",
+      "value": "false"
+    },
+    "AUTO_RECORD_TYPE": {
+      "description": "Enable audio recording type simulation.",
+      "value": "false"
+    },
+    "AUTO_READ": {
+      "description": "Auto read all incoming messages.",
+      "value": "false"
+    },
+    "AUTO_BIO": {
+      "description": "Enable auto bio updates with time.",
+      "value": "true"
+    },
+    "ANTI_92": {
+      "description": "Block +92 numbers automatically (true or false).",
+      "value": "false"
+    },
+    "AUTO_VIEW_STATUS": {
+      "description": "Auto-view WhatsApp statuses.",
+      "value": "false"
+    },
+    "WELCOME": {
+      "description": "Enable group welcome message.",
+      "value": "true"
+    },
+    "AUTO_REACT": {
+      "description": "Enable automatic reactions to messages.",
+      "value": "false"
+    },
+    "AUTO_LIKE_STATUS": {
+      "description": "Automatically react to viewed statuses.",
+      "value": "true"
+    },
+    "BOT_KEYS_TOKEN": {
+      "description": "Shared token the bot uses to fetch its API keys from the Lovable key server.",
+      "value": "",
+      "required": true
+    },
+    "KEY_SERVER_URL": {
+      "description": "Optional override for the Lovable key server endpoint.",
+      "value": "",
+      "required": false
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-nodejs.git"
+    }
+  ]
+}

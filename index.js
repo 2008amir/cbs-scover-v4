@@ -1091,19 +1091,65 @@ async function generateAndSend(EliteProTech, from, sender, mek, texts, audioPart
     const spoken = [texts.length > 1 ? userLine : combined, ...hints].filter(Boolean).join('\n');
     const mediaParts = [...(imgParts || []), ...(audioParts || [])];
 
+    // Requests only the real human owner could satisfy (own photo, calls,
+    // meeting, money, live location) are answered with silence — no reply at all.
+    if (humanOnlyRequest(combined)) {
+        console.log(`chatbot stayed silent (human-only request) in ${from}`);
+        return;
+    }
+
     // A failure here throws: nothing is sent to the chat, the caller logs it and
     // DMs the exact error to the owner.
     const reply = await global.geminiChat(prompt, spoken, mediaParts);
 
+    // The model itself can decide the message needs a real human — then nothing
+    // is sent and the chat simply stays quiet.
+    const clean = String(reply || '').trim();
+    if (!clean || /^\[?silent\]?$/i.test(clean) || /\[SILENT\]/i.test(clean)) {
+        console.log(`chatbot stayed silent (model chose silence) in ${from}`);
+        return;
+    }
+
 // Random 1/2/3 s pause, then typing for exactly characters × 0.3 s.
-    await pauseThenType(EliteProTech, from, reply);
+    await pauseThenType(EliteProTech, from, clean);
 
-    global.userChats[sender].push(`Bot: ${reply}`);
+    global.userChats[sender].push(`Bot: ${clean}`);
     while (global.userChats[sender].length > 20) global.userChats[sender].shift();
-    global.logChatMessage(from, 'You', reply);
+    global.logChatMessage(from, 'You', clean);
 
-    await EliteProTech.sendMessage(from, { text: reply }, { quoted: mek });
+    await EliteProTech.sendMessage(from, { text: clean }, { quoted: mek });
 }
+
+/* ---- human-only requests -------------------------------------------------
+   Things no bot can honestly do for the account owner. When one of these is
+   asked the chatbot stays completely silent instead of lying or dodging. */
+function humanOnlyRequest(text) {
+    const t = String(text || '').toLowerCase();
+    if (!t) return false;
+    const patterns = [
+        // pictures / selfies of "yourself"
+        /\b(send|show|snap|share|post)\b[^.?!]{0,25}\b(your|ur|yur)\b[^.?!]{0,15}\b(pic|pics|picture|photo|photos|image|selfie|face|dp)\b/,
+        /\b(your|ur)\b[^.?!]{0,15}\b(pic|picture|photo|selfie|face|image)\b[^.?!]{0,15}\b(please|pls|abeg|na)?\b\s*\??$/,
+        /\b(let me see|i want to see|can i see)\b[^.?!]{0,20}\b(you|your face|your pic|your picture|your photo)\b/,
+        /\baiko\s*(min|mun|ni)?\s*(da)?\s*(hoto|hotonki|hotonka|selfie)\b/,
+        /\b(hoton(ki|ka)|hoto naka|hoto naki)\b/,
+        // calls
+        /\b(video|voice|audio)\s*(call|calling|chat)\b/,
+        /\b(call me|i want to call|can i call you|let'?s call|pick my call|answer my call)\b/,
+        /\b(kira|zan kira|ki kira|ka kira|video call)\b/,
+        // meeting in person
+        /\b(let'?s meet|can we meet|meet me|see me|come to my house|where do you (live|stay)|your address)\b/,
+        /\b(mu ?hadu|bari ?mu ?hadu|ina ?ki ?ke ?zaune|ina ?ka ?ke ?zaune|adireshi)\b/,
+        // money
+        /\b(send|give|lend|transfer)\b[^.?!]{0,20}\b(money|cash|credit|airtime|naira|\d{3,})\b/,
+        /\b(kudi|ka ?tura ?min|ki ?tura ?min|aiko ?min ?da ?kudi|recharge card)\b/,
+        // live location / identity proof
+        /\b(your|ur)\s+(live\s+)?location\b/,
+        /\b(prove|show me)\b[^.?!]{0,20}\b(you'?re real|you are real|you'?re human|you are human)\b/
+    ];
+    return patterns.some(re => re.test(t));
+}
+
 
 
 /* ---- owner error notifications ----------------------------------------

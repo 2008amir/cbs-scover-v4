@@ -41,7 +41,6 @@ keyServer.loadKeys(true)
 
 
 const NAME_FILE = path.join(__dirname, 'database', 'chatbotname.json');
-const USERNAME_FILE = path.join(__dirname, 'database', 'username.json');
 const ANTIDELETE_GROUP_FILE = path.join(__dirname, 'database', 'antideletegroup.json');
 
 function readJsonSafe(file, fallback) {
@@ -52,22 +51,10 @@ function readJsonSafe(file, fallback) {
     }
 }
 
-// The name the bot answers with:
-//   1. the name set with .chatbotname
-//   2. the username set with .username
-//   3. the WhatsApp profile name of this account
-//   4. last resort default
 function chatbotName() {
-    const set = readJsonSafe(NAME_FILE, {})?.name;
-    if (set && String(set).trim()) return String(set).trim();
-    const user = readJsonSafe(USERNAME_FILE, {})?.name || global.username;
-    if (user && String(user).trim()) return String(user).trim();
-    const wa = global.botWaName;
-    if (wa && String(wa).trim()) return String(wa).trim();
-    return 'CBS-SCOVER';
+    const data = readJsonSafe(NAME_FILE, {});
+    return data?.name ? String(data.name) : 'CBS-SCOVER';
 }
-global.chatbotName = chatbotName;
-
 
 /* =====================================================================
    HUMAN-STYLE CHATBOT
@@ -319,22 +306,16 @@ function chatbotMode(chatJid) {
 
 // Gender the bot should chat as here: the per-chat override wins, otherwise
 // the global gender of the active personality.
-// LOVE_START defaults to a MALE bot talking to a FEMALE person.
 function chatbotGender(chatJid) {
     const data = chatbotStore();
     const perChat = data?.genders?.[chatJid];
     if (perChat === 'male' || perChat === 'female') return perChat;
     const mode = chatbotMode(chatJid);
-    if (mode === 'lovestart') {
-        const ls = data?.lovestartGender || data?.loveGender || data?.gender;
-        return ls === 'male' || ls === 'female' ? ls : 'male';
-    }
-    const g = mode === 'love'
+    const g = mode === 'love' || mode === 'lovestart'
         ? (data?.loveGender || data?.gender)
         : mode === 'friend' ? (data?.friendGender || data?.gender) : data?.gender;
     return g === 'male' || g === 'female' ? g : null;
 }
-
 global.chatbotGender = chatbotGender;
 
 
@@ -492,8 +473,6 @@ LANGUAGE — UNDERSTAND FIRST, THEN MATCH
 - Mostly Hausa -> answer mostly Hausa. Hausa + English -> mix naturally the same way. Mostly English -> English. Pidgin -> real Pidgin.
 - Never force a language switch, never translate their message back to them, and never explain the language.
 - NEVER drop random Hausa or Pidgin words into a reply just to sound Nigerian. Mix only because they mixed.
-- English message -> English reply, or English with a little Hausa mixed in. Hausa message -> Hausa reply, or Hausa with a little English mixed in. Never answer a fully English message in pure Hausa.
-
 ${mode === 'love' || mode === 'lovestart' ? '- Affectionate words in Hausa/Pidgin land the strongest — use them sparingly so they keep their weight.' : '- Friendly banter words in Hausa/Pidgin land the strongest — use them sparingly so they keep their weight.'}`;
 }
 
@@ -502,22 +481,16 @@ function hausaBlock() {
     return `
 HAUSA (HIGH PRIORITY)
 - You understand normal Nigerian Hausa fully: correct Hausa, Hausa without tone marks, informal spelling, heavy WhatsApp abbreviations, slang, jokes, greetings, expressions, very short messages, questions, and Hausa mixed with English or Pidgin.
-- Read abbreviations by meaning, e.g. "Slm" = "Assalamu alaikum" (answer "Wa alaikumus salam"), "Lpy lau allhmdl" = "Lafiya lau, Alhamdulillah", "ykk" = "ya kake", "msa" = "masha Allah", "xaka/xai/xan" = "zaka/zai/zan", "mgn" = "magana", "dinka" = "dinka", "ina kwana" = good morning greeting.
+- Read abbreviations by meaning, e.g. "Lpy lau allhmdl" = "Lafiya lau, Alhamdulillah", "ykk" = "ya kake"/"yaya kake", "msa" = "masha Allah", "ina kwana" = good morning greeting.
 - Understand the real point of the message even when it is bent or misspelt, e.g. "Mike damunka naji kana magana haka" is them saying something is bothering you / you sound off — answer THAT, not a generic greeting.
 - Never translate their message back to them and never comment on their spelling.
-- Never say "ban gane ba" / "ban gane maganarka ba" unless the message is genuinely meaningless. Work the meaning out from the whole conversation first; if it is still unclear, react naturally to what you did understand instead of declaring you don't understand.
 
 HAUSA OUTPUT QUALITY
 - When the chat is mostly Hausa, reply in clear, natural Nigerian Hausa a real person would type. Meaning > grammar perfection > slang.
 - Prefer simple conversational Hausa: "Lafiya lau 😊 ya kake?" not a formal textbook construction.
-- ALWAYS use the short natural forms: "ya kake?" (to a man), "ya kike?" (to a woman), "ya lafiya?", "ya ake ciki?", "ya aikin?", "ya gajiya?". NEVER write "yaya kake", "yaya kike", "yaya aiki", "yaya gida" — that form is forbidden.
-- NEVER use these phrases at all: "Yamma lafiya", "Yamma lafiya lau", "Lpy qlau" and other broken spellings. Greet properly instead: "Barka da yamma", "Barka da rana", "Ina kwana", "Lafiya lau".
-- Greet correctly by time of day: morning "Ina kwana" / "Barka da safe", afternoon "Barka da rana", evening "Barka da yamma", night "Barka da dare". Reply to "Sannu da zuwa" with "Na gode" / "Yauwa, na gode", not with a greeting of your own.
-- Salam is answered with salam: "Assalamu alaikum" -> "Wa alaikumus salam", then continue.
 - Avoid: literal English-to-Hausa translations, Google-Translate Hausa, overly formal or complicated vocabulary, Hausa words used in the wrong context, random Hausa words inside English sentences, repeating the same sentence pattern, making every sentence romantic, long textbook Hausa.
-- Never repeat "ya kake?", "Lafiya?", "Me kake yi?" over and over. Vary or simply react: "Ahh haka ne 😂 yanzu na gane." is a complete, valid reply with no question at all.`;
+- Never repeat "Yaya kake?", "Lafiya?", "Me kake yi?" over and over. Vary or simply react: "Ahh haka ne 😂 yanzu na gane." is a complete, valid reply with no question at all.`;
 }
-
 
 
 // Emoji habit per personality, on top of the user's own emoji rate.
@@ -525,19 +498,19 @@ function emojiBlock(mode) {
     if (mode === 'love') {
         return `
 EMOJI STYLE — LOVE
-- Use emojis often and naturally: 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀 😍 😝 😜 💞 💖 💕 🫶
+- Use emojis often and naturally: 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀
 - Never one after every word. One or two per message, matching the actual feeling.`;
     }
     if (mode === 'lovestart') {
         return `
 EMOJI STYLE — LOVE_START
-- Use emojis naturally and regularly: 😊 😂 😄 🥰 ❤️ 🤍 😅 👀 ✨ 😍 😝 😜 💞 💖 💕 🫶(🥰,😍,💞, 💖, 💕, ❤️ only once things are genuinely warm between you).
+- Use emojis naturally and regularly: 😊 😂 😄 🥰 ❤️ 🤍 😅 👀 ✨ (🥰/❤️ only once things are genuinely warm between you).
 - Normally 0–2 emojis per message depending on the emotional context. Not after every sentence, and don't repeat the same emoji again and again.`;
     }
     if (mode === 'friend') {
         return `
 EMOJI STYLE — FRIEND
-- Mix plain text and emojis: 😂 😅 🫠 😝 😜 🥳 😫 🤣 💥👌 🔥 💀 🙏 — some messages with, some without.`;
+- Mix plain text and emojis: 😂 😅 👌 🔥 💀 🙏 — some messages with, some without.`;
     }
     return `
 EMOJI STYLE — NORMAL
@@ -601,37 +574,22 @@ ${learned ? `\nHuman love talk you have absorbed the feeling of (never quote it)
     }
     if (mode === 'lovestart') {
         const she = gender === 'female';
-        const botName = chatbotName();
         return `
 You are operating in LOVE_START personality.
 
-You are ${botName}. YOU are the one who started this conversation — you sent the very first message to this person. So never behave like a stranger who was messaged out of nowhere, never ask "who are you?", "waye kai?", "waye kike tsammani?", and never act suspicious or confused about why they are talking to you.
-Your job is to keep a natural, warm, respectful conversation going and let familiarity grow through the conversation itself.
+This is a conversation that begins from zero. Treat the person as someone you have not previously spoken with.
+Your job is to maintain a natural, warm, respectful conversation and gradually develop familiarity through the actual conversation.
 
-WHO YOU ARE
-- Your name is ${botName}. If they ask your name, give it simply and naturally ("Ni ${botName}", "I'm ${botName} 😊").
-- You are ${she ? 'a woman' : 'a man'}, and you are talking to ${she ? 'a man' : 'a woman'} unless they clearly say otherwise. Use the ${she ? 'male' : 'female'}-addressed forms for them: ${she ? '"ya kake", "kai", "abokina"' : '"ya kike", "ke", "abokiyata"'}.
-- Never switch your own gender because of the word they used for you.
-
-FIRST CONTACT (you opened the chat)
-- Be simple, friendly and relaxed. Short messages.
-- Since you messaged first, expect questions like "waye kai?", "ina na sanka?", "ka gabatar da kanka". Answer warmly and simply: give your name, say you just wanted to greet / chat, nothing dramatic.
-- Do not act romantic yet. Do not claim you met before. Do not write a long introduction.
-- If asked how you got the number, keep it simple and consistent (a friend / a group), never invent detail.
+FIRST CONTACT
+- Start simply. Be friendly. Be relaxed.
+- Do not immediately act romantic. Do not pretend you already know the person. Do not invent previous meetings.
+- Do not write a long introduction.
+- If asked how the contact was obtained, only state information that is actually known.
 
 CONVERSATION
 - Carefully understand the latest message before replying, and respond directly to what the person just said.
-- Keep it natural. Ask questions only when they make sense, never several at once, and never end every message with a question.
-- Sometimes simply react. Do not repeat the same questions, and do not keep asking "How are you?", "What are you doing?", "ya kake?", "Me kake yi?".
-- Never accuse them or sound cold ("bana tsammanin kowa", "waye kike tsammani"). You started this chat, so stay welcoming.
-
-SILENCE — WHEN NOT TO REPLY AT ALL
-Some messages must get NO reply. In those cases output exactly: [NO_REPLY]
-- They ask for your picture / selfie / photo / "turomin pic dinka" / "send your face" / a video of you, or ask you to send any image of yourself.
-- They ask for a voice note, voice call or video call, or ask you to record yourself.
-- They ask for anything only a physical human could give or do: proof you are real, your live location, meeting up, sending money, documents, ID, screenshots of yourself.
-- They ask a question that only the real human owner of this account could truthfully answer (private personal history, family details, where the owner is right now, what the owner did today in real life).
-- Never explain the silence, never say "ni ba mutum ba ne", "ban da hoto", "I can't send pictures", "I'm a bot". Just output [NO_REPLY] and nothing else.
+- Keep the conversation natural. Ask questions only when they make sense, never several at once, and never end every message with a question.
+- Sometimes simply react naturally. Do not repeat the same questions, and do not keep asking "How are you?", "What are you doing?", "Yaya kake?", "Me kake yi?".
 
 CONTEXT
 - Remember information from the conversation, use recent conversation history, and use learned facts when relevant.
@@ -639,7 +597,7 @@ CONTEXT
 - The latest message has the highest priority. Never answer an old topic when the latest message clearly changed the topic.
 
 CONVERSATIONAL STAGE — DECIDED BY THEIR ACTUAL BEHAVIOUR, NOT BY MESSAGE COUNT
-1. FIRST CONTACT — they reply to your opener, ask who you are, ask how you got the number, answer very shortly, are cautious. Be short, friendly, natural. No forced romance, no pile of questions.
+1. FIRST CONTACT — they say hi, ask who you are, ask how you got the number, answer very shortly, are cautious. Be short, friendly, natural. No forced romance, no pile of questions.
 2. GETTING TO KNOW EACH OTHER — they keep replying, ask you things, share information, relax. Learn their name and interests naturally, talk about the day, school/work/hobbies when it fits, one question at a time.
 3. COMFORTABLE CONVERSATION — longer replies, jokes, mutual questions, personal details offered freely. Be more playful and expressive, remember earlier topics, occasional compliments — not every reply romantic.
 4. AFFECTIONATE — only when the actual conversation supports it and they clearly welcome that tone. Never because many messages happened.
@@ -650,16 +608,14 @@ CONVERSATIONAL STAGE — DECIDED BY THEIR ACTUAL BEHAVIOUR, NOT BY MESSAGE COUNT
 LANGUAGE
 You MUST understand Nigerian Hausa properly: standard Hausa, informal Hausa, WhatsApp Hausa, Hausa without tone marks, abbreviated Hausa, Hausa mixed with English, Hausa mixed with Pidgin, slang, typing mistakes and short forms.
 - Do NOT depend on a small hard-coded list of Hausa keywords. Use your own understanding of the complete message and the conversation context to work out the meaning.
-- They write Hausa -> reply in natural Hausa, or Hausa lightly mixed with English the way Nigerians do.
-- They write English -> reply in English, or English lightly mixed with Hausa. Never answer a fully English message in pure Hausa.
-- They mix -> mix the same way. Pidgin -> natural Pidgin.
+- Mostly Hausa -> reply mostly in understandable Nigerian Hausa. Hausa + English -> mix them naturally. English -> mostly English. Pidgin -> understand and reply in natural Pidgin.
 - Never insert random Hausa words just to appear Hausa-speaking. Never translate their message unless they ask for a translation.
 
 HAUSA QUALITY
 Use simple, natural Nigerian Hausa. Priority: correct meaning, natural conversation, clear Hausa, appropriate vocabulary.
 Avoid literal machine translation, strange grammar, overly formal or textbook Hausa, random Hausa words, repetitive expressions.
-- Infer abbreviations from context: "Lpy lau allhmdl" = "Lafiya lau, Alhamdulillah"; "Ykk" is a casual "ya kake" type expression, not an unknown word; "Xaka" = "zaka".
-- "Masha Allah 😊. Asha hutu lpy." -> answer its real meaning directly.
+- Infer abbreviations from context: "Lpy lau allhmdl" = "Lafiya lau, Alhamdulillah"; "Ykk" is a casual "ya kake / yaya kake" type expression, not an unknown word.
+- "Masha Allah 😊. A huta da kyau mana." -> answer its real meaning directly.
 - "Mike damunka naji kana magana haka" -> answer what that sentence actually means, never an unrelated generic reply.
 
 MESSAGE LENGTH
@@ -674,7 +630,7 @@ ROMANTIC PROGRESSION
 HONESTY
 - You are ${she ? 'a woman' : 'a man'} in tone, but do not claim to literally be the human owner of this account.
 - Do not invent the owner's real-world experiences, meetings, locations, relationships, memories or actions.
-- Never announce that you are a bot, an AI or "not a human" on your own. If they ask something that would force that answer, output [NO_REPLY] instead.
+- If directly asked whether you are an AI or automated assistant, answer honestly and briefly, then continue naturally.
 ${petNameBlock('lovestart', gender)}
 ${codeSwitchBlock('lovestart')}
 ${hausaBlock()}
@@ -682,7 +638,6 @@ ${emojiBlock('lovestart')}
 ${styleKnowledgeBlock('lovestart', gender, latest, exchanges)}
 ${learned ? `\nHuman love talk you have absorbed the feeling of (never quote it):\n${learned}` : ''}`;
     }
-
     if (mode === 'friend') {
         return `
 PERSONALITY MODE — CLOSE FRIEND (platonic only, clearly different from love mode)
@@ -1105,16 +1060,7 @@ async function generateAndSend(EliteProTech, from, sender, mek, texts, audioPart
 
     // A failure here throws: nothing is sent to the chat, the caller logs it and
     // DMs the exact error to the owner.
-    const raw = await global.geminiChat(prompt, spoken, mediaParts);
-
-    // Deliberate silence: picture/voice/video requests and questions only the
-    // real human owner could answer get NO reply at all — nothing is sent and
-    // nothing is explained to the chat.
-    const reply = String(raw || '').replace(/\[NO_REPLY\]/gi, '').trim();
-    if (!reply || /\[NO_REPLY\]/i.test(String(raw || ''))) {
-        console.log(`chatbot stayed silent in ${from} (no-reply rule)`);
-        return;
-    }
+    const reply = await global.geminiChat(prompt, spoken, mediaParts);
 
 // Random 1/2/3 s pause, then typing for exactly characters × 0.3 s.
     await pauseThenType(EliteProTech, from, reply);
@@ -1124,7 +1070,6 @@ async function generateAndSend(EliteProTech, from, sender, mek, texts, audioPart
     global.logChatMessage(from, 'You', reply);
 
     await EliteProTech.sendMessage(from, { text: reply }, { quoted: mek });
-
 }
 
 
@@ -1202,17 +1147,14 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 │ .chatbot-love on / off
 │ .chatbot-friend on / off
 │ .chatbot-love-start on / off
-│ .chatbot-love-start help  (full menu)
-│ .chatbot-love-start status
 │
 │ Remote (from your own DM):
 │ .chatbot chat <number|groupid> on/off
 │ .chatbot-love chat <number> on/off
 │ .chatbot-friend chat <number> on/off
-│ .chatbot-love-start <number> on/off
-│ .chatbot-love-start <number> on start
+│ .chatbot-love-start chat <number> on/off
+│ .chatbot-love-start chat <number> on start
 │   └ bot sends the first "hi" itself
-
 ╰──────────────
 
 ╭─「 PERSONALITIES 」
@@ -1223,7 +1165,7 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 ╰──────────────
 
 ╭─「 EMOJI STYLE 」
-│ LOVE        frequent & natural 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀 😍 😝 😜 💞 💖 💕 🫶
+│ LOVE        frequent & natural 😊 ❤️ 🥰 😄 😂 🤍 ✨ 👀
 │ LOVE_START  warm and expressive, grows with closeness
 │ FRIEND      mix of plain text and emojis
 │ NORMAL      some messages with, some without
@@ -1240,49 +1182,6 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 │     use the cached knowledge only
 ╰──────────────
 Typing time = characters × 0.3s. Errors never go to the chat — they come to you.`;
-
-// Dedicated LOVE_START menu (shown by .chatbot-love-start help).
-function loveStartHelp(prefix) {
-    const data = chatbotStore();
-    const modes = data?.modes || {};
-    const chats = data?.chats || {};
-    const active = Object.keys(modes).filter(j => modes[j] === 'lovestart' && chats[j] === true);
-    return `╭─「 LOVE_START MENU 」
-│ ${prefix}chatbot-love-start on / off
-│   └ this chat
-│ ${prefix}chatbot-love-start <number> on/off
-│   └ any chat, from anywhere
-│ ${prefix}chatbot-love-start <number> on start
-│   └ turns it on AND the bot sends
-│     the first message to that number
-│ ${prefix}chatbot-love-start status
-│   └ status here + active chats
-│ ${prefix}chatbot-love-start gender male/female
-│ ${prefix}chatbot-love-start gender here male/female
-│ ${prefix}chatbot-love-start help
-╰──────────────
-
-╭─「 STATUS 」
-│ Active LOVE_START chats: ${active.length}
-│ Bot name: ${chatbotName()}
-│   └ ${prefix}chatbotname / ${prefix}username, else
-│     this account's WhatsApp name
-╰──────────────
-
-╭─「 HOW IT BEHAVES 」
-│ • The BOT starts the conversation
-│ • Bot is male by default and chats
-│   with the person as a female
-│ • Hausa in → Hausa (or Hausa+English)
-│ • English in → English (or mixed)
-│ • Picture / voice / video-call requests
-│   get NO reply at all
-│ • Questions only a real human could
-│   answer get NO reply at all
-│ • Romance only if the chat grows there
-╰──────────────`;
-}
-
 
 // Last-resort fallbacks only (used if opener generation fails). Short, friendly,
 // first-contact appropriate, no romance and no invented history.
@@ -1311,17 +1210,16 @@ const OPENERS = {
 // whatever context exists in this chat, so it is never one of two fixed lines.
 // The hard-coded list is only a last-resort fallback if generation fails.
 async function sendLoveStartOpener(EliteProTech, target) {
-    const gender = chatbotGender(target) || 'male';
+    const gender = chatbotGender(target) || 'female';
     const name = chatbotName();
     let text = '';
     try {
         const prompt = `
-You are ${name}, ${gender === 'female' ? 'a woman' : 'a man'}, sending the VERY FIRST WhatsApp message to ${gender === 'female' ? 'a man' : 'a woman'} you have never spoken to before. You got their number from a friend / a group.
+You are ${name}, ${gender === 'female' ? 'a woman' : 'a man'}, sending the VERY FIRST WhatsApp message to someone you have never spoken to before. You got their number from a friend / a group.
 Write that opener only — nothing else, no quotes, no explanation.
 Rules: short (one line, at most two very short ones), friendly, natural, relaxed, appropriate for a first contact. Not romantic. Not a paragraph. No formal introduction letter.
-Say hi, and it's fine to give your name naturally (you are ${name}). 0–1 emoji.
-Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, kana lpy? 😊", "Heyy 👋 ${gender === 'female' ? 'ya kake?' : 'ya kike?'}"
-Never write "yaya kake"/"yaya kike" and never write "Yamma lafiya".
+Say hi, and it's fine to give your name naturally. 0–1 emoji.
+Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, ya lafiya? 😊", "Heyy 👋 ya ake ciki?"
 Never invent how you got the number beyond "a friend"/"a group", and never claim you met before.
 ${hausaBlock()}
 
@@ -1333,10 +1231,9 @@ ${archiveBlock(target)}`.trim();
         console.error('opener generation failed:', err?.message || err);
     }
     if (!text) {
-        const list = OPENERS[gender] || OPENERS.male;
+        const list = OPENERS[gender] || OPENERS.female;
         text = list[Math.floor(Math.random() * list.length)].replace('{name}', name);
     }
-
     await pauseThenType(EliteProTech, target, text);
     await EliteProTech.sendMessage(target, { text });
     global.logChatMessage(target, 'You', text);
@@ -1368,42 +1265,10 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     const isOwner = mek.key.fromMe || senderNum.startsWith(String(global.ownernumber || '').replace(/\D/g, ''));
     const from = mek.key.remoteJid;
 
-    // Remember this account's WhatsApp profile name — used as the bot name when
-    // no .chatbotname / .username is set.
-    if (EliteProTech.user?.name) global.botWaName = EliteProTech.user.name;
-
-    if ((parts[0] || '').toLowerCase() === 'help' || (parts[0] || '').toLowerCase() === 'menu') {
-        const text = modeByCmd[cmd] === 'lovestart' ? loveStartHelp(prefix) : CHATBOT_HELP;
-        await EliteProTech.sendMessage(from, { text }, { quoted: mek });
+    if ((parts[0] || '').toLowerCase() === 'help') {
+        await EliteProTech.sendMessage(from, { text: CHATBOT_HELP }, { quoted: mek });
         return true;
     }
-
-    // LOVE_START gender: the bot's own gender (it treats the person as the
-    // opposite gender). Default: male bot chatting with a female person.
-    if (modeByCmd[cmd] === 'lovestart' && (parts[0] || '').toLowerCase() === 'gender') {
-        if (!isOwner) {
-            await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
-            return true;
-        }
-        const here = ['here', 'this'].includes((parts[1] || '').toLowerCase());
-        const want = (here ? parts[2] : parts[1] || '').toLowerCase();
-        const data = chatbotStore();
-        data.genders = data.genders || {};
-        if (want === 'male' || want === 'female') {
-            if (here) data.genders[from] = want;
-            else data.lovestartGender = want;
-            saveChatbotStore(data);
-            await EliteProTech.sendMessage(from, {
-                text: `${want === 'female' ? '👩' : '👨'} LOVE_START gender set to *${want}*${here ? ' in this chat only' : ''}.\nIt chats with the person as ${want === 'female' ? 'a man' : 'a woman'}.`
-            }, { quoted: mek });
-            return true;
-        }
-        await EliteProTech.sendMessage(from, {
-            text: `Use: ${prefix}${cmd} gender male/female\nOr:  ${prefix}${cmd} gender here male/female\n\nCurrent here: ${chatbotGender(from) || 'male'}`
-        }, { quoted: mek });
-        return true;
-    }
-
 
     // Owner-only: start the SEPARATE romantic video knowledge engine. It runs in
     // the background — the reply returns immediately and live chats keep working
@@ -1445,59 +1310,26 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
 
 
 
-    const mode = modeByCmd[cmd];
-    const first = (parts[0] || '').toLowerCase();
-
-    // A target can be given either as ".<cmd> chat <number> on" or simply as
-    // ".<cmd> <number> on".
-    const numberTarget = first !== 'chat' && /^[+\d][\d\s-]{6,}$/.test(parts[0] || '')
-        ? resolveTargetJid(parts[0])
-        : null;
-    const remote = first === 'chat' || !!numberTarget;
-
-    // LOVE_START status / active chat list.
-    if (mode === 'lovestart' && (!parts.length || first === 'status' || first === 'list')) {
-        const data = chatbotStore();
-        const modes = data?.modes || {};
-        const chats = data?.chats || {};
-        const active = Object.keys(modes).filter(j => modes[j] === 'lovestart' && chats[j] === true);
-        const hereOn = modes[from] === 'lovestart' && chats[from] === true;
-        const list = active.length
-            ? active.map(j => `│ • ${j.split('@')[0]}`).join('\n')
-            : '│ • none';
-        await EliteProTech.sendMessage(from, {
-            text: `╭─「 LOVE_START STATUS 」\n` +
-                `│ Here: ${hereOn ? '✅ ON' : '❌ OFF'}\n` +
-                `│ Active chats: ${active.length}\n` +
-                `│ Bot name: ${chatbotName()}\n` +
-                `│ Bot gender: ${chatbotGender(from) || 'male'} (talks to ${(chatbotGender(from) || 'male') === 'male' ? 'a woman' : 'a man'})\n` +
-                `├──────────────\n${list}\n╰──────────────\n\n` +
-                `${prefix}${cmd} help — full menu`
-        }, { quoted: mek });
-        return true;
-    }
-
+    const remote = (parts[0] || '').toLowerCase() === 'chat';
     // Only the remote form and the LOVE_START toggles are handled here; the
     // existing local .chatbot on/off handling stays exactly as it was.
-    if (!remote && mode !== 'lovestart') return false;
+    if (!remote && modeByCmd[cmd] !== 'lovestart') return false;
     if (!isOwner) {
         await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
         return true;
     }
 
-    const target = remote ? (numberTarget || resolveTargetJid(parts[1])) : from;
-    const offset = numberTarget ? 0 : (remote ? 1 : -1);
-    const action = String(parts[offset + 1] || '').toLowerCase();
-    const extra = String(parts[offset + 2] || '').toLowerCase();
+    const mode = modeByCmd[cmd];
+    const target = remote ? resolveTargetJid(parts[1]) : from;
+    const action = (remote ? parts[2] : parts[0] || '').toLowerCase();
+    const extra = (remote ? parts[3] : parts[1] || '').toLowerCase();
 
     if (remote && !target) {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} 2349xxxxxxxxx on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} chat 2349xxxxxxxxx on/off` }, { quoted: mek });
         return true;
     }
     if (action !== 'on' && action !== 'off') {
-        await EliteProTech.sendMessage(from, {
-            text: `Use:\n${prefix}${cmd} on/off\n${prefix}${cmd} <number> on/off\n${prefix}${cmd} <number> on start\n${prefix}${cmd} help`
-        }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd}${remote ? ' chat <number|groupid>' : ''} on/off` }, { quoted: mek });
         return true;
     }
     if (mode !== 'normal' && target.endsWith('@g.us')) {
@@ -1523,21 +1355,16 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     saveChatbotStore(data);
 
     const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
-    const activeCount = Object.keys(data.modes).filter(j => data.modes[j] === mode && data.chats[j] === true).length;
     await EliteProTech.sendMessage(from, {
-        text: `✅ Chatbot ${label} turned ${action.toUpperCase()} for ${target.split('@')[0]}` +
-            (mode === 'lovestart' ? `\nActive ${label} chats: ${activeCount}` : '')
+        text: `✅ Chatbot ${label} turned ${action.toUpperCase()} for ${target.split('@')[0]}`
     }, { quoted: mek });
 
-    // ".<cmd> <number> on start" (and the ".. chat <number> on start" form):
-    // the bot writes the very first message itself.
-    if (action === 'on' && mode === 'lovestart' && (extra === 'start' || (remote && extra === 'start'))) {
+    if (action === 'on' && mode === 'lovestart' && extra === 'start') {
         sendLoveStartOpener(EliteProTech, target).catch(err =>
             reportChatbotError(EliteProTech, target, mek, 'lovestart', err));
     }
     return true;
 };
-
 
 
 /* Side channel: sees EVERY message in the socket (including the owner's own

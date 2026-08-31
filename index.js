@@ -314,9 +314,35 @@ function chatbotGender(chatJid) {
     const g = mode === 'love' || mode === 'lovestart'
         ? (data?.loveGender || data?.gender)
         : mode === 'friend' ? (data?.friendGender || data?.gender) : data?.gender;
-    return g === 'male' || g === 'female' ? g : null;
+    if (g === 'male' || g === 'female') return g;
+    // Defaults: the bot is male everywhere, except LOVE_START where it chats
+    // as a female unless the owner sets something else.
+    return mode === 'lovestart' ? 'female' : 'male';
 }
 global.chatbotGender = chatbotGender;
+
+/* ---- greeting time awareness (Africa/Lagos, WAT = UTC+1) ---------------- */
+function lagosHour() {
+    return new Date(Date.now() + 60 * 60 * 1000).getUTCHours();
+}
+
+function timeGreetingBlock() {
+    const h = lagosHour();
+    const part = h < 5 ? 'LATE_NIGHT' : h < 12 ? 'MORNING' : h < 16 ? 'AFTERNOON' : h < 20 ? 'EVENING' : 'NIGHT';
+    const guide = {
+        LATE_NIGHT: 'Very late night. Hausa: "Ina kwana" only after they wake; right now "Ba ka barci ba?" / "Still awake?" fits better.',
+        MORNING: 'Morning. Hausa greeting: "Ina kwana" / "Barka da safe" → reply style "Lafiya lau, kwana biyu 😊". English: "Good morning".',
+        AFTERNOON: 'Afternoon. Hausa greeting: "Ina yini" / "Barka da rana" → "Lafiya lau, yini?" English: "Good afternoon".',
+        EVENING: 'Evening. Hausa greeting: "Ina yini" / "Barka da yamma" → "Lafiya lau, yamma?" English: "Good evening".',
+        NIGHT: 'Night. Hausa: "Barka da dare" / "Ina wuni". English: "Good evening" (or "Good night" when they are going to sleep).'
+    }[part];
+    return `
+TIME OF DAY (real clock, Nigeria/WAT — currently ${String(h).padStart(2, '0')}:00, ${part})
+- ${guide}
+- Never greet with the wrong part of the day (no "good morning" in the evening) and never repeat a greeting you already used in this conversation.
+- If they greet with a time greeting, understand it exactly ("ina kwana" = good morning, "ina yini" = good afternoon/evening) and answer that greeting first, in their language.`;
+}
+
 
 
 function genderBlock(gender, mode) {

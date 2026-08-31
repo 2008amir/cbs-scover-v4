@@ -1401,9 +1401,21 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     const from = mek.key.remoteJid;
 
     if ((parts[0] || '').toLowerCase() === 'help') {
-        await EliteProTech.sendMessage(from, { text: CHATBOT_HELP }, { quoted: mek });
+        const text = modeByCmd[cmd] === 'lovestart' ? LOVESTART_HELP : CHATBOT_HELP;
+        await EliteProTech.sendMessage(from, { text }, { quoted: mek });
         return true;
     }
+
+    // How many chats this personality is currently active in, and which ones.
+    if (['status', 'list', 'active'].includes((parts[0] || '').toLowerCase())) {
+        if (!isOwner) {
+            await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
+            return true;
+        }
+        await EliteProTech.sendMessage(from, { text: chatbotStatusText(modeByCmd[cmd]) }, { quoted: mek });
+        return true;
+    }
+
 
     // Owner-only: start the SEPARATE romantic video knowledge engine. It runs in
     // the background — the reply returns immediately and live chats keep working

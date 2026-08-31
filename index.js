@@ -1238,6 +1238,49 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 ╰──────────────
 Typing time = characters × 0.3s. Errors never go to the chat — they come to you.`;
 
+// Dedicated LOVE_START menu (shown by .chatbot-love-start help).
+function loveStartHelp(prefix) {
+    const data = chatbotStore();
+    const modes = data?.modes || {};
+    const chats = data?.chats || {};
+    const active = Object.keys(modes).filter(j => modes[j] === 'lovestart' && chats[j] === true);
+    return `╭─「 LOVE_START MENU 」
+│ ${prefix}chatbot-love-start on / off
+│   └ this chat
+│ ${prefix}chatbot-love-start <number> on/off
+│   └ any chat, from anywhere
+│ ${prefix}chatbot-love-start <number> on start
+│   └ turns it on AND the bot sends
+│     the first message to that number
+│ ${prefix}chatbot-love-start status
+│   └ status here + active chats
+│ ${prefix}chatbot-love-start gender male/female
+│ ${prefix}chatbot-love-start gender here male/female
+│ ${prefix}chatbot-love-start help
+╰──────────────
+
+╭─「 STATUS 」
+│ Active LOVE_START chats: ${active.length}
+│ Bot name: ${chatbotName()}
+│   └ ${prefix}chatbotname / ${prefix}username, else
+│     this account's WhatsApp name
+╰──────────────
+
+╭─「 HOW IT BEHAVES 」
+│ • The BOT starts the conversation
+│ • Bot is male by default and chats
+│   with the person as a female
+│ • Hausa in → Hausa (or Hausa+English)
+│ • English in → English (or mixed)
+│ • Picture / voice / video-call requests
+│   get NO reply at all
+│ • Questions only a real human could
+│   answer get NO reply at all
+│ • Romance only if the chat grows there
+╰──────────────`;
+}
+
+
 // Last-resort fallbacks only (used if opener generation fails). Short, friendly,
 // first-contact appropriate, no romance and no invented history.
 const OPENERS = {

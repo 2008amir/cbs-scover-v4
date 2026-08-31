@@ -1202,14 +1202,17 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 │ .chatbot-love on / off
 │ .chatbot-friend on / off
 │ .chatbot-love-start on / off
+│ .chatbot-love-start help  (full menu)
+│ .chatbot-love-start status
 │
 │ Remote (from your own DM):
 │ .chatbot chat <number|groupid> on/off
 │ .chatbot-love chat <number> on/off
 │ .chatbot-friend chat <number> on/off
-│ .chatbot-love-start chat <number> on/off
-│ .chatbot-love-start chat <number> on start
+│ .chatbot-love-start <number> on/off
+│ .chatbot-love-start <number> on start
 │   └ bot sends the first "hi" itself
+
 ╰──────────────
 
 ╭─「 PERSONALITIES 」

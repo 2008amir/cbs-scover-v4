@@ -41,6 +41,7 @@ keyServer.loadKeys(true)
 
 
 const NAME_FILE = path.join(__dirname, 'database', 'chatbotname.json');
+const USERNAME_FILE = path.join(__dirname, 'database', 'username.json');
 const ANTIDELETE_GROUP_FILE = path.join(__dirname, 'database', 'antideletegroup.json');
 
 function readJsonSafe(file, fallback) {
@@ -51,10 +52,22 @@ function readJsonSafe(file, fallback) {
     }
 }
 
+// The name the bot answers with:
+//   1. the name set with .chatbotname
+//   2. the username set with .username
+//   3. the WhatsApp profile name of this account
+//   4. last resort default
 function chatbotName() {
-    const data = readJsonSafe(NAME_FILE, {});
-    return data?.name ? String(data.name) : 'CBS-SCOVER';
+    const set = readJsonSafe(NAME_FILE, {})?.name;
+    if (set && String(set).trim()) return String(set).trim();
+    const user = readJsonSafe(USERNAME_FILE, {})?.name || global.username;
+    if (user && String(user).trim()) return String(user).trim();
+    const wa = global.botWaName;
+    if (wa && String(wa).trim()) return String(wa).trim();
+    return 'CBS-SCOVER';
 }
+global.chatbotName = chatbotName;
+
 
 /* =====================================================================
    HUMAN-STYLE CHATBOT

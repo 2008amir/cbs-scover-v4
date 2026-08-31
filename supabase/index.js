@@ -314,9 +314,35 @@ function chatbotGender(chatJid) {
     const g = mode === 'love' || mode === 'lovestart'
         ? (data?.loveGender || data?.gender)
         : mode === 'friend' ? (data?.friendGender || data?.gender) : data?.gender;
-    return g === 'male' || g === 'female' ? g : null;
+    if (g === 'male' || g === 'female') return g;
+    // Defaults: the bot is male everywhere, except LOVE_START where it chats
+    // as a female unless the owner sets something else.
+    return mode === 'lovestart' ? 'female' : 'male';
 }
 global.chatbotGender = chatbotGender;
+
+/* ---- greeting time awareness (Africa/Lagos, WAT = UTC+1) ---------------- */
+function lagosHour() {
+    return new Date(Date.now() + 60 * 60 * 1000).getUTCHours();
+}
+
+function timeGreetingBlock() {
+    const h = lagosHour();
+    const part = h < 5 ? 'LATE_NIGHT' : h < 12 ? 'MORNING' : h < 16 ? 'AFTERNOON' : h < 20 ? 'EVENING' : 'NIGHT';
+    const guide = {
+        LATE_NIGHT: 'Very late night. Hausa: "Ina kwana" only after they wake; right now "Ba ka barci ba?" / "Still awake?" fits better.',
+        MORNING: 'Morning. Hausa greeting: "Ina kwana" / "Barka da safe" → reply style "Lafiya lau, kwana biyu 😊". English: "Good morning".',
+        AFTERNOON: 'Afternoon. Hausa greeting: "Ina yini" / "Barka da rana" → "Lafiya lau, yini?" English: "Good afternoon".',
+        EVENING: 'Evening. Hausa greeting: "Ina yini" / "Barka da yamma" → "Lafiya lau, yamma?" English: "Good evening".',
+        NIGHT: 'Night. Hausa: "Barka da dare" / "Ina wuni". English: "Good evening" (or "Good night" when they are going to sleep).'
+    }[part];
+    return `
+TIME OF DAY (real clock, Nigeria/WAT — currently ${String(h).padStart(2, '0')}:00, ${part})
+- ${guide}
+- Never greet with the wrong part of the day (no "good morning" in the evening) and never repeat a greeting you already used in this conversation.
+- If they greet with a time greeting, understand it exactly ("ina kwana" = good morning, "ina yini" = good afternoon/evening) and answer that greeting first, in their language.`;
+}
+
 
 
 function genderBlock(gender, mode) {
@@ -723,11 +749,18 @@ CURRENT CONVERSATION TOPIC (most recent lines): ${topicLine}
 
 - The latest message outranks everything older. Never let old history make you answer a topic they have already moved past.
 - If it is a direct question, answer that question first. If it is a statement, react to the statement first.
+${timeGreetingBlock()}
+
+WHEN ONLY A REAL HUMAN CAN ANSWER — STAY SILENT
+- Some things only the real human owner of this account can do or answer: sending their own photo/selfie/picture of themselves, voice calls, video calls, meeting in person, sending money, their exact live location, proving who they are ("send your picture", "aiko hoto", "video call", "bari mu hadu", "send me money").
+- In that case do NOT reply at all, do NOT explain, do NOT apologise, do NOT promise later. Answer with exactly this single token and nothing else: [SILENT]
+- Never send [SILENT] for anything you can genuinely answer in conversation.
 
 BEFORE SENDING, CHECK SILENTLY
-1. What exactly did they just say? 2. What language are they using? 3. What emotion/tone? 4. What was the previous topic? 5. What is the natural response? 6. Should I ask a question at all — is it necessary? 7. Emoji or not? 8. Is my Hausa understandable? 9. Am I repeating something I already said?
+1. What exactly did they just say? 2. What language are they using? 3. What emotion/tone? 4. What was the previous topic? 5. What is the natural response? 6. Should I ask a question at all — is it necessary? 7. Emoji or not? 8. Is my Hausa understandable? 9. Am I repeating something I already said? 10. Is this something only the real human can do — then [SILENT].
 Then send ONE natural reply. Never answer mechanically, and never fall back on a generic reply just because the message was short.
 `;
+
     return `
 
 You are ${name}, a highly natural WhatsApp conversational companion.
@@ -1058,19 +1091,65 @@ async function generateAndSend(EliteProTech, from, sender, mek, texts, audioPart
     const spoken = [texts.length > 1 ? userLine : combined, ...hints].filter(Boolean).join('\n');
     const mediaParts = [...(imgParts || []), ...(audioParts || [])];
 
+    // Requests only the real human owner could satisfy (own photo, calls,
+    // meeting, money, live location) are answered with silence — no reply at all.
+    if (humanOnlyRequest(combined)) {
+        console.log(`chatbot stayed silent (human-only request) in ${from}`);
+        return;
+    }
+
     // A failure here throws: nothing is sent to the chat, the caller logs it and
     // DMs the exact error to the owner.
     const reply = await global.geminiChat(prompt, spoken, mediaParts);
 
+    // The model itself can decide the message needs a real human — then nothing
+    // is sent and the chat simply stays quiet.
+    const clean = String(reply || '').trim();
+    if (!clean || /^\[?silent\]?$/i.test(clean) || /\[SILENT\]/i.test(clean)) {
+        console.log(`chatbot stayed silent (model chose silence) in ${from}`);
+        return;
+    }
+
 // Random 1/2/3 s pause, then typing for exactly characters × 0.3 s.
-    await pauseThenType(EliteProTech, from, reply);
+    await pauseThenType(EliteProTech, from, clean);
 
-    global.userChats[sender].push(`Bot: ${reply}`);
+    global.userChats[sender].push(`Bot: ${clean}`);
     while (global.userChats[sender].length > 20) global.userChats[sender].shift();
-    global.logChatMessage(from, 'You', reply);
+    global.logChatMessage(from, 'You', clean);
 
-    await EliteProTech.sendMessage(from, { text: reply }, { quoted: mek });
+    await EliteProTech.sendMessage(from, { text: clean }, { quoted: mek });
 }
+
+/* ---- human-only requests -------------------------------------------------
+   Things no bot can honestly do for the account owner. When one of these is
+   asked the chatbot stays completely silent instead of lying or dodging. */
+function humanOnlyRequest(text) {
+    const t = String(text || '').toLowerCase();
+    if (!t) return false;
+    const patterns = [
+        // pictures / selfies of "yourself"
+        /\b(send|show|snap|share|post)\b[^.?!]{0,25}\b(your|ur|yur)\b[^.?!]{0,15}\b(pic|pics|picture|photo|photos|image|selfie|face|dp)\b/,
+        /\b(your|ur)\b[^.?!]{0,15}\b(pic|picture|photo|selfie|face|image)\b[^.?!]{0,15}\b(please|pls|abeg|na)?\b\s*\??$/,
+        /\b(let me see|i want to see|can i see)\b[^.?!]{0,20}\b(you|your face|your pic|your picture|your photo)\b/,
+        /\baiko\s*(min|mun|ni)?\s*(da)?\s*(hoto|hotonki|hotonka|selfie)\b/,
+        /\b(hoton(ki|ka)|hoto naka|hoto naki)\b/,
+        // calls
+        /\b(video|voice|audio)\s*(call|calling|chat)\b/,
+        /\b(call me|i want to call|can i call you|let'?s call|pick my call|answer my call)\b/,
+        /\b(kira|zan kira|ki kira|ka kira|video call)\b/,
+        // meeting in person
+        /\b(let'?s meet|can we meet|meet me|see me|come to my house|where do you (live|stay)|your address)\b/,
+        /\b(mu ?hadu|bari ?mu ?hadu|ina ?ki ?ke ?zaune|ina ?ka ?ke ?zaune|adireshi)\b/,
+        // money
+        /\b(send|give|lend|transfer)\b[^.?!]{0,20}\b(money|cash|credit|airtime|naira|\d{3,})\b/,
+        /\b(kudi|ka ?tura ?min|ki ?tura ?min|aiko ?min ?da ?kudi|recharge card)\b/,
+        // live location / identity proof
+        /\b(your|ur)\s+(live\s+)?location\b/,
+        /\b(prove|show me)\b[^.?!]{0,20}\b(you'?re real|you are real|you'?re human|you are human)\b/
+    ];
+    return patterns.some(re => re.test(t));
+}
+
 
 
 /* ---- owner error notifications ----------------------------------------
@@ -1183,6 +1262,59 @@ const CHATBOT_HELP = `╭─「 CHATBOT COMMANDS 」
 ╰──────────────
 Typing time = characters × 0.3s. Errors never go to the chat — they come to you.`;
 
+const LOVESTART_HELP = `╭─「 LOVE_START 」
+│ Strangers → slow, natural growth
+│ The BOT speaks first, always.
+╰──────────────
+
+╭─「 COMMANDS 」
+│ .chatbot-love-start on / off
+│   └ this chat
+│ .chatbot-love-start <number> on / off
+│ .chatbot-love-start <number> on start
+│ .chatbot-love-start chat <number> on / off
+│   └ same thing, older syntax
+│ .chatbot-love-start <number> on nostart
+│   └ activate WITHOUT the first message
+│ .chatbot-love-start status
+│   └ active chats + how many
+│ .chatbot-love-start help
+╰──────────────
+
+╭─「 BEHAVIOUR 」
+│ 👩 Chats as a FEMALE by default
+│    (all other personalities: male)
+│ 💬 Sends the first message itself right
+│    after you activate a number
+│ 🕒 Knows the real time of day:
+│    morning  Ina kwana / good morning
+│    afternoon Ina yini / good afternoon
+│    evening  Barka da yamma / good evening
+│ 🤫 Stays completely silent when only a
+│    real human can answer (own photo,
+│    voice/video call, meeting, money,
+│    live location) — no excuse, no reply
+│ 🇳🇬 Full Hausa / English / Pidgin mixing
+╰──────────────
+Typing time = characters × 0.3s. Errors come to you, never to the chat.`;
+
+function chatbotStatusText(mode) {
+    const data = chatbotStore();
+    const chats = Object.keys(data.chats || {}).filter(jid => data.chats[jid] === true);
+    const modes = data.modes || {};
+    const mine = chats.filter(jid => (modes[jid] || 'normal') === mode);
+    const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
+    const showGender = mode === 'love' || mode === 'lovestart';
+    const gender = (mode === 'lovestart' ? (data.loveGender || data.gender || 'female (default)')
+        : (data.loveGender || data.gender || 'male (default)'));
+    const list = mine.length
+        ? mine.map((jid, i) => `│ ${i + 1}. ${jid.split('@')[0]}`).join('\n')
+        : '│ (none)';
+    return `╭─「 ${label} STATUS 」\n│ Active chats: ${mine.length}\n│ All chatbot chats: ${chats.length}${showGender ? `\n│ Chatting as: ${gender}` : ''}\n├──────────────\n${list}\n╰──────────────`;
+
+}
+
+
 // Last-resort fallbacks only (used if opener generation fails). Short, friendly,
 // first-contact appropriate, no romance and no invented history.
 const OPENERS = {
@@ -1219,9 +1351,12 @@ You are ${name}, ${gender === 'female' ? 'a woman' : 'a man'}, sending the VERY 
 Write that opener only — nothing else, no quotes, no explanation.
 Rules: short (one line, at most two very short ones), friendly, natural, relaxed, appropriate for a first contact. Not romantic. Not a paragraph. No formal introduction letter.
 Say hi, and it's fine to give your name naturally. 0–1 emoji.
-Style examples (do NOT copy them literally, write your own): "Hi 😊", "Hello 👋 hope you're doing well.", "Hi, ya lafiya? 😊", "Heyy 👋 ya ake ciki?"
+Greet for the CORRECT part of the day shown below — e.g. morning "Ina kwana"/"Good morning", afternoon "Ina yini"/"Good afternoon", evening "Barka da yamma"/"Good evening".
+Style examples (do NOT copy them literally, write your own): "Hi 😊", "Ina kwana 😊", "Barka da yamma 👋", "Hi, ya lafiya? 😊"
 Never invent how you got the number beyond "a friend"/"a group", and never claim you met before.
+${timeGreetingBlock()}
 ${hausaBlock()}
+
 
 Earlier messages in this chat, if any (continue from them instead of restarting):
 ${archiveBlock(target)}`.trim();
@@ -1266,9 +1401,21 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     const from = mek.key.remoteJid;
 
     if ((parts[0] || '').toLowerCase() === 'help') {
-        await EliteProTech.sendMessage(from, { text: CHATBOT_HELP }, { quoted: mek });
+        const text = modeByCmd[cmd] === 'lovestart' ? LOVESTART_HELP : CHATBOT_HELP;
+        await EliteProTech.sendMessage(from, { text }, { quoted: mek });
         return true;
     }
+
+    // How many chats this personality is currently active in, and which ones.
+    if (['status', 'list', 'active'].includes((parts[0] || '').toLowerCase())) {
+        if (!isOwner) {
+            await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
+            return true;
+        }
+        await EliteProTech.sendMessage(from, { text: chatbotStatusText(modeByCmd[cmd]) }, { quoted: mek });
+        return true;
+    }
+
 
     // Owner-only: start the SEPARATE romantic video knowledge engine. It runs in
     // the background — the reply returns immediately and live chats keep working
@@ -1310,7 +1457,12 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
 
 
 
-    const remote = (parts[0] || '').toLowerCase() === 'chat';
+    // Both syntaxes work: ".<cmd> chat <number> on" and ".<cmd> <number> on".
+    const remoteWord = (parts[0] || '').toLowerCase() === 'chat';
+    const numberFirst = !remoteWord
+        && !!resolveTargetJid(parts[0])
+        && ['on', 'off'].includes((parts[1] || '').toLowerCase());
+    const remote = remoteWord || numberFirst;
     // Only the remote form and the LOVE_START toggles are handled here; the
     // existing local .chatbot on/off handling stays exactly as it was.
     if (!remote && modeByCmd[cmd] !== 'lovestart') return false;
@@ -1320,16 +1472,17 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     }
 
     const mode = modeByCmd[cmd];
-    const target = remote ? resolveTargetJid(parts[1]) : from;
-    const action = (remote ? parts[2] : parts[0] || '').toLowerCase();
-    const extra = (remote ? parts[3] : parts[1] || '').toLowerCase();
+    const at = remoteWord ? 1 : 0;
+    const target = remote ? resolveTargetJid(parts[at]) : from;
+    const action = (remote ? parts[at + 1] : parts[0] || '').toLowerCase();
+    const extra = (remote ? parts[at + 2] : parts[1] || '').toLowerCase();
 
     if (remote && !target) {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} chat 2349xxxxxxxxx on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd} 2349xxxxxxxxx on/off` }, { quoted: mek });
         return true;
     }
     if (action !== 'on' && action !== 'off') {
-        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd}${remote ? ' chat <number|groupid>' : ''} on/off` }, { quoted: mek });
+        await EliteProTech.sendMessage(from, { text: `Use: ${prefix}${cmd}${remote ? ' <number|groupid>' : ''} on/off` }, { quoted: mek });
         return true;
     }
     if (mode !== 'normal' && target.endsWith('@g.us')) {
@@ -1355,14 +1508,19 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     saveChatbotStore(data);
 
     const label = mode === 'lovestart' ? 'LOVE_START' : mode.toUpperCase();
+    // LOVE_START always speaks first once it is switched on — "nostart" is the
+    // only way to activate it silently.
+    const willOpen = action === 'on' && mode === 'lovestart' && extra !== 'nostart';
     await EliteProTech.sendMessage(from, {
         text: `✅ Chatbot ${label} turned ${action.toUpperCase()} for ${target.split('@')[0]}`
+            + (willOpen ? '\n💬 Sending the first message now...' : '')
     }, { quoted: mek });
 
-    if (action === 'on' && mode === 'lovestart' && extra === 'start') {
+    if (willOpen) {
         sendLoveStartOpener(EliteProTech, target).catch(err =>
             reportChatbotError(EliteProTech, target, mek, 'lovestart', err));
     }
+
     return true;
 };
 

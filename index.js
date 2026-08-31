@@ -1365,10 +1365,42 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     const isOwner = mek.key.fromMe || senderNum.startsWith(String(global.ownernumber || '').replace(/\D/g, ''));
     const from = mek.key.remoteJid;
 
-    if ((parts[0] || '').toLowerCase() === 'help') {
-        await EliteProTech.sendMessage(from, { text: CHATBOT_HELP }, { quoted: mek });
+    // Remember this account's WhatsApp profile name — used as the bot name when
+    // no .chatbotname / .username is set.
+    if (EliteProTech.user?.name) global.botWaName = EliteProTech.user.name;
+
+    if ((parts[0] || '').toLowerCase() === 'help' || (parts[0] || '').toLowerCase() === 'menu') {
+        const text = modeByCmd[cmd] === 'lovestart' ? loveStartHelp(prefix) : CHATBOT_HELP;
+        await EliteProTech.sendMessage(from, { text }, { quoted: mek });
         return true;
     }
+
+    // LOVE_START gender: the bot's own gender (it treats the person as the
+    // opposite gender). Default: male bot chatting with a female person.
+    if (modeByCmd[cmd] === 'lovestart' && (parts[0] || '').toLowerCase() === 'gender') {
+        if (!isOwner) {
+            await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
+            return true;
+        }
+        const here = ['here', 'this'].includes((parts[1] || '').toLowerCase());
+        const want = (here ? parts[2] : parts[1] || '').toLowerCase();
+        const data = chatbotStore();
+        data.genders = data.genders || {};
+        if (want === 'male' || want === 'female') {
+            if (here) data.genders[from] = want;
+            else data.lovestartGender = want;
+            saveChatbotStore(data);
+            await EliteProTech.sendMessage(from, {
+                text: `${want === 'female' ? '👩' : '👨'} LOVE_START gender set to *${want}*${here ? ' in this chat only' : ''}.\nIt chats with the person as ${want === 'female' ? 'a man' : 'a woman'}.`
+            }, { quoted: mek });
+            return true;
+        }
+        await EliteProTech.sendMessage(from, {
+            text: `Use: ${prefix}${cmd} gender male/female\nOr:  ${prefix}${cmd} gender here male/female\n\nCurrent here: ${chatbotGender(from) || 'male'}`
+        }, { quoted: mek });
+        return true;
+    }
+
 
     // Owner-only: start the SEPARATE romantic video knowledge engine. It runs in
     // the background — the reply returns immediately and live chats keep working

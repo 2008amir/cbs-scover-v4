@@ -2568,27 +2568,53 @@ const VOICE_CHANGER_MENU_COMMANDS = [
 ];
 
 function voiceChangerMenuSection(caption) {
-    const prefix = global.prefix || '.';
-    const text = String(caption || '');
+    const lines = String(caption || '').split('\n');
 
-    // Mimic the style used by the surrounding menu when we can detect it.
-    const boxed = /┏━+❍/.test(text);
-    const bulletLine = text.split('\n').find(l => /^[│┃|]\s*[.!#/]?\w/.test(l.trim()));
-    const bullet = bulletLine ? bulletLine.trim()[0] : '•';
+    // Menu command lines look like "│𖥟╾ Play". Clone that exact style plus the
+    // header/footer that wrap a section so the new section fits right in.
+    const itemRe = /^(\s*\S{0,4}[│┃|]\S{0,4}\s*[╾-]?\s*)([A-Za-z])/;
+    const firstItem = lines.findIndex(l => itemRe.test(l));
 
-    const items = VOICE_CHANGER_MENU_COMMANDS.map(c => `${bullet} ${prefix}${c}`).join('\n');
+    const names = ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp'];
 
-    if (boxed) {
-        return `┏━━━━━━━━━━━━━━━❍\n┗┳❍ 「 *VOICE CHANGER* 」❍\n┏┻━━━━━━━━━━━━━━❍\n${items}\n┗━━━━━━━━━━━━━━━❍`;
+    if (firstItem === -1) {
+        const prefix = global.prefix || '.';
+        return `╭──〔 *VOICE CHANGER* 〕──\n` +
+            names.map(n => `│ ${prefix}${n.toLowerCase()}`).join('\n') +
+            `\n╰────────────────`;
     }
-    return `╭──〔 *VOICE CHANGER* 〕──\n${items}\n╰────────────────`;
+
+    const itemPrefix = lines[firstItem].match(itemRe)[1];
+    const items = names.map(n => `${itemPrefix}${n}`).join('\n');
+
+    // Header: the nearest non-empty line above the items, with its section
+    // name swapped for ours. Footer: first non-item line after the section.
+    let header = '';
+    for (let i = firstItem - 1; i >= 0 && i >= firstItem - 3; i--) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        if (/[A-Z]{3,}/.test(line.replace(/\*/g, ''))) {
+            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, 'VOICE CHANGER');
+        }
+        break;
+    }
+
+    let footer = '';
+    for (let i = firstItem; i < lines.length; i++) {
+        if (itemRe.test(lines[i])) continue;
+        if (lines[i].trim()) footer = lines[i];
+        break;
+    }
+
+    return [header, items, footer].filter(Boolean).join('\n');
 }
 
 function withVoiceChangerMenu(caption) {
     const text = String(caption || '');
-    if (/VOICE CHANGER/i.test(text)) return text;
+    if (/VOICE\s*CHANGER/i.test(text)) return text;
     return `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
 }
+
 
 global.sendMenu = async function sendMenu(EliteProTech, m, image, caption) {
     const img = typeof image === 'string' ? { url: image } : image;

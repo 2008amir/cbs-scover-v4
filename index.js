@@ -1400,7 +1400,19 @@ global.chatbotCommand = async function chatbotCommand(EliteProTech, mek, body) {
     const isOwner = mek.key.fromMe || senderNum.startsWith(String(global.ownernumber || '').replace(/\D/g, ''));
     const from = mek.key.remoteJid;
 
+    // Bare ".chatbot-love-start" (no arguments) -> status + total active + commands.
+    if (!parts.length) {
+        if (!isOwner) {
+            await EliteProTech.sendMessage(from, { text: global.mess.owner }, { quoted: mek });
+            return true;
+        }
+        const text = `${chatbotStatusText(modeByCmd[cmd])}\n\n${modeByCmd[cmd] === 'lovestart' ? LOVESTART_HELP : CHATBOT_HELP}`;
+        await EliteProTech.sendMessage(from, { text }, { quoted: mek });
+        return true;
+    }
+
     if ((parts[0] || '').toLowerCase() === 'help') {
+
         const text = modeByCmd[cmd] === 'lovestart' ? LOVESTART_HELP : CHATBOT_HELP;
         await EliteProTech.sendMessage(from, { text }, { quoted: mek });
         return true;

@@ -2738,19 +2738,22 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
 
     let number = clean(envNumber || process.env.PAIR_NUMBER);
 
-    // Ask in the terminal when no number was provided through the environment.
-    while (!number || !validCountry(number)) {
-        if (!process.stdin.isTTY) {
-            console.log(chalk.redBright('No terminal input available. Set PAIR_NUMBER (with country code, digits only) and restart.'));
-            return;
-        }
+    // Ask in the terminal (panel consoles work too — just type the number and
+    // press enter in the console input box).
+    for (let tries = 0; (!number || !validCountry(number)) && tries < 10; tries++) {
         const answer = await question(chalk.bgBlack(chalk.greenBright('\n📲 Enter your WhatsApp number with country code (example 2349162748703): ')));
         number = clean(answer);
         if (!number || !validCountry(number)) {
             console.log(chalk.bgBlack(chalk.redBright('Invalid number. Start with your country code, example 2349162748703')));
             number = '';
+            await new Promise((r) => setTimeout(r, 1500));
         }
     }
+    if (!number) {
+        console.log(chalk.redBright('No number received. Type your number in the console, or set PAIR_NUMBER, then restart.'));
+        return;
+    }
+
     try { rl?.close?.(); } catch {}
 
     const socketOpen = () => EliteProTech.ws?.isOpen === true || EliteProTech.ws?.readyState === 1 || EliteProTech.ws?.socket?.readyState === 1;

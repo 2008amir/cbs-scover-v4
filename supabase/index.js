@@ -1,10 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-// Make sure the single-tick delivery-receipt patch is in place BEFORE baileys is
-// ever required. Hosts that install with --ignore-scripts skip postinstall, which
-// is why single tick kept falling back to double ticks while online.
-try { require('./scripts/patch-baileys-single-tick').apply({ quiet: true }); } catch {}
 
 // Separate, isolated internet video knowledge engine. Live chat only ever calls
 // its cache readers (relevantVideoKnowledge) — never its network functions.
@@ -1064,9 +1060,9 @@ async function pauseThenType(EliteProTech, chatJid, text) {
     const body = String(text || '');
     const total = humanDelay(body.length);
     const until = Date.now() + total;
-    // "available" is required by WhatsApp before chat states are shown; the
-    // single-tick guard drops it for those chats so they stay offline-looking,
-    // while the typing state itself still goes through.
+    // "available" is required by WhatsApp before chat states are shown, so the
+    // typing state goes through normally.
+
     await EliteProTech.sendPresenceUpdate('available', chatJid).catch(() => {});
     while (Date.now() < until) {
         await EliteProTech.sendPresenceUpdate('composing', chatJid).catch(() => {});
@@ -2333,16 +2329,13 @@ global.handleChatId = async function handleChatId(EliteProTech, m, args, prefix)
 
 
 
-/* ==================== DOUBLE TICK / SINGLE TICK ====================
+/* ==================== DOUBLE TICK ====================
    .doubletick on|off                     -> every chat
    .doubletick chat on|off                -> inside that person's DM only
    .doubletick chat <phone> on|off        -> from the owner DM, that number
-   (same three shapes for .singletick)
 
    double  = the sender always sees the 2 grey (delivered) ticks, even while the
-             account looks offline, and never a blue/read tick.
-   single  = the sender keeps seeing 1 tick, even when we are online and even
-             after we reply.  single wins over double for the same chat.       */
+             account looks offline, and never a blue/read tick.                */
 
 const TICKS_FILE = path.join(__dirname, 'database', 'ticks.json');
 
@@ -2350,7 +2343,6 @@ function readTicksDB() {
     const raw = readJsonSafe(TICKS_FILE, {}) || {};
     return {
         double: raw.double === true,
-        single: raw.single === true,
         chats: (raw.chats && typeof raw.chats === 'object') ? { ...raw.chats } : {}
     };
 }
@@ -2364,7 +2356,7 @@ function writeTicksDB(db) {
     }
 }
 
-// 'single' | 'double' | null
+// 'double' | null
 // WhatsApp delivers the same contact as several jid shapes (2349...@s.whatsapp.net,
 // 1467...@lid, with a :device suffix). Match on the user part so a per-chat setting
 // is honoured no matter which shape the incoming stanza used.
@@ -2389,24 +2381,15 @@ function tickMode(jid) {
     let sawNone = false;
     for (const key of tickKeyVariants(id)) {
         const per = db.chats[key];
-        if (per === 'single' || per === 'double') return per;   // per-chat wins
+        if (per === 'double') return per;   // per-chat wins
         if (per === 'none') sawNone = true;
     }
     if (sawNone) return null;
-    if (db.single) return 'single';
     if (db.double) return 'double';
     return null;
 }
 
 global.tickMode = tickMode;
-
-// Baileys normally emits the delivery receipt from an internal closure before
-// messages.upsert reaches this application. The dependency's install-time patch
-// calls this synchronous gate at that earliest point, which is the only way to
-// keep a new incoming DM on one grey tick while the linked account is online.
-global.shouldSuppressDeliveryReceipt = function shouldSuppressDeliveryReceipt(jid, participant) {
-    return tickMode(jid) === 'single' || tickMode(participant) === 'single';
-};
 
 function normalizeUserJid(input) {
     const raw = String(input || '').trim();
@@ -2421,8 +2404,8 @@ global.handleTickCommand = async function handleTickCommand(EliteProTech, m, arg
     const reply = (text) => EliteProTech.sendMessage(chatId, { text }, { quoted: m });
     const parts = String(args || '').trim().split(/\s+/).filter(Boolean).map(p => p.toLowerCase());
     const db = readTicksDB();
-    const label = kind === 'single' ? 'SINGLE TICK (always offline tick)' : 'DOUBLE TICK (always delivered)';
-    const cmd = kind === 'single' ? 'singletick' : 'doubletick';
+    const label = 'DOUBLE TICK (always delivered)';
+    const cmd = 'doubletick';
 
     const wordState = (w) => {
         if (['on', 'enable', 'activate', 'start'].includes(w)) return true;
@@ -2436,8 +2419,8 @@ global.handleTickCommand = async function handleTickCommand(EliteProTech, m, arg
             .map(([jid, v]) => `• ${jid} — ${v}`).join('\n');
         return reply(
             `✔️ *${label}*\n\n` +
-            `All chats: ${db[kind] ? '✅ ON' : '❌ OFF'}\n` +
-            `This chat: ${tickMode(chatId) === kind ? '✅ ON' : '❌ OFF'}\n` +
+            `All chats: ${db.double ? '✅ ON' : '❌ OFF'}\n` +
+            `This chat: ${tickMode(chatId) === 'double' ? '✅ ON' : '❌ OFF'}\n` +
             (list ? `\n*Per-chat:*\n${list}\n` : '') +
             `\n*${prefix}${cmd} on/off* — all chats\n` +
             `*${prefix}${cmd} chat on/off* — this chat only\n` +
@@ -2451,7 +2434,7 @@ global.handleTickCommand = async function handleTickCommand(EliteProTech, m, arg
     if (parts.length === 1) {
         const state = wordState(parts[0]);
         if (state === null) return help();
-        db[kind] = state;
+        db.double = state;
         writeTicksDB(db);
         return reply(`${state ? '✅' : '❌'} *${label}* ${state ? 'activated' : 'deactivated'} for all chats.`);
     }
@@ -2468,7 +2451,7 @@ global.handleTickCommand = async function handleTickCommand(EliteProTech, m, arg
         target = chatId;
     }
 
-    if (state) db.chats[target] = kind;
+    if (state) db.chats[target] = 'double';
     else db.chats[target] = 'none';
     writeTicksDB(db);
     return reply(
@@ -2488,7 +2471,6 @@ global.installTickHooks = function installTickHooks(EliteProTech) {
     if (origSendReceipt) {
         EliteProTech.sendReceipt = async (jid, participant, messageIds, type) => {
             const mode = tickMode(jid);
-            if (mode === 'single') return;                                  // stay on 1 tick
             if (mode === 'double' && (type === 'read' || type === 'read-self')) return;
             return origSendReceipt(jid, participant, messageIds, type);
         };
@@ -2500,7 +2482,6 @@ global.installTickHooks = function installTickHooks(EliteProTech) {
         EliteProTech.sendReceipts = async (keys, type) => {
             const allowed = (keys || []).filter(k => {
                 const mode = tickMode(jidOf(k));
-                if (mode === 'single') return false;
                 if (mode === 'double' && (type === 'read' || type === 'read-self')) return false;
                 return true;
             });
@@ -2512,25 +2493,15 @@ global.installTickHooks = function installTickHooks(EliteProTech) {
     const origReadMessages = EliteProTech.readMessages?.bind(EliteProTech);
     if (origReadMessages) {
         EliteProTech.readMessages = async (keys) => {
-            const allowed = (keys || []).filter(k => !tickMode(jidOf(k)));   // no blue tick in either mode
+            const allowed = (keys || []).filter(k => !tickMode(jidOf(k)));   // no blue tick
             if (!allowed.length) return;
             return origReadMessages(allowed);
         };
     }
 
-    const origPresence = EliteProTech.sendPresenceUpdate?.bind(EliteProTech);
-    if (origPresence) {
-        EliteProTech.sendPresenceUpdate = async (type, toJid) => {
-            // Single tick means the account must look offline in that chat.
-            if (toJid && tickMode(toJid) === 'single' && type !== 'unavailable') return;
-            return origPresence(type, toJid);
-        };
-    }
-
-    /* Low level guard: Baileys sends delivery receipts/acks from internal
-       closures, so hooking the public helpers above is not enough.  Drop the
-       raw receipt/ack stanzas for single-tick chats so the sender stays on one
-       tick even while we are online and replying. */
+    /* Low level guard: Baileys sends read receipts from internal closures, so
+       hooking the public helpers above is not enough. Drop the raw read
+       receipt/ack stanzas for double-tick chats. */
     const isBlockedNode = (node) => {
         try {
             const tag = node?.tag;
@@ -2541,7 +2512,6 @@ global.installTickHooks = function installTickHooks(EliteProTech) {
             if (!isReceipt) return false;
             const mode = tickMode(target) ||
                 (attrs.participant ? tickMode(String(attrs.participant)) : null);
-            if (mode === 'single') return true;
             const type = String(attrs.type || '');
             if (mode === 'double' && (type === 'read' || type === 'read-self')) return true;
             return false;
@@ -2581,6 +2551,7 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
         console.error('Tick receipt failed:', err?.message || err);
     }
 };
+
 
 
 /* ============================ MENU ============================ */

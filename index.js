@@ -2732,6 +2732,25 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
 }
 
 /* ------------------------------------------------------------------ *
+ * Remove every saved credential so the next connect starts a fresh
+ * pairing (used when WhatsApp logs the device out).
+ * ------------------------------------------------------------------ */
+global.clearSession = function clearSession() {
+    const dir = path.join(__dirname, 'session');
+    try {
+        if (!fs.existsSync(dir)) return;
+        for (const file of fs.readdirSync(dir)) {
+            if (file === 'README.md') continue;
+            try { fs.rmSync(path.join(dir, file), { recursive: true, force: true }); } catch {}
+        }
+        console.log('🧹 Old session credentials removed.');
+    } catch (e) {
+        console.log('Could not clear the session folder:', e?.message || e);
+    }
+};
+
+
+/* ------------------------------------------------------------------ *
  * Pairing code login.
  * No SESSION_ID and no number in .env are needed: the bot asks for the
  * WhatsApp number right in the terminal (panel console works too) and

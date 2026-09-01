@@ -2684,65 +2684,37 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
     code = code.split('fs.unlinkSync(path.join(antiDeleteDir, `${remoteJid}_${msgId}.json`))')
         .join('global.antiDeleteForget(remoteJid, msgId)');
 
-    /* ---- Login/pairing fixes (no TTY on hosting panels) ---- */
-
-    // Use the configured owner/pair number instead of a hardcoded one.
-    const hardNumber = 'let phoneNumber = "2347047504860"';
-    if (code.includes(hardNumber)) {
-        code = code.replace(hardNumber,
-            `let phoneNumber = String(process.env.PAIR_NUMBER || process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '')`);
+    /* ---- Web server: never crash when the panel port is already taken ---- */
+    const listenLine = '}).listen(PORT, "0.0.0.0", () => {});';
+    if (code.includes(listenLine)) {
+        code = code.replace(listenLine,
+            `}).on('error', (e) => {\n    if (e && e.code === 'EADDRINUSE') console.log('ℹ️ Web port ' + PORT + ' already in use, continuing without the status page.')\n    else console.log('Web server error:', e?.message || e)\n}).listen(PORT, "0.0.0.0", () => {});`);
     } else {
-        console.log('⚠️ Pairing number patch target not found.');
+        console.log('⚠️ Web server listen patch target not found.');
     }
 
-    // Remove the inner shadow declaration that always forced an interactive prompt.
-    const shadowDecl = '      let phoneNumber\n      if (!!phoneNumber) {';
-    if (code.includes(shadowDecl)) {
-        code = code.replace(shadowDecl, '      if (!!phoneNumber) {');
+    /* ---- Login/pairing: ask for the number in the terminal ---- */
+
+    // No hardcoded number: pairing always runs until the session is registered.
+    code = code.replace(/let phoneNumber = "[0-9+]*"/, "let phoneNumber = String(process.env.PAIR_NUMBER || '').replace(/[^0-9]/g, '')");
+    code = code.replace('const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")',
+        'const pairingCode = !process.argv.includes("--qr")');
+
+    // Replace the whole pairing block with our own: it prompts in the terminal,
+    // waits for the socket to be open, and retries instead of crashing.
+    const pairStart = 'if (pairingCode && !EliteProTech.authState.creds.registered) {';
+    const pairEnd = '      }, 3000)\n   }';
+    const si = code.indexOf(pairStart);
+    const ei = si === -1 ? -1 : code.indexOf(pairEnd, si);
+    if (si !== -1 && ei !== -1) {
+        code = code.slice(0, si) +
+            `if (pairingCode && !EliteProTech.authState.creds.registered) {
+      global.startPairing(EliteProTech, phoneNumber, rl, question, PHONENUMBER_MCC)
+   }` + code.slice(ei + pairEnd.length);
     } else {
-        console.log('⚠️ Pairing shadow-variable patch target not found.');
+        console.log('⚠️ Pairing block patch target not found.');
     }
 
-    // Wait for the socket to be open and retry, instead of firing after 3s and
-    // crashing with "Connection Closed / Precondition Required (428)".
-    const pairTimeout = `      setTimeout(async () => {
-         let code = await EliteProTech.requestPairingCode(phoneNumber)
-         code = code?.match(/.{1,4}/g)?.join("-") || code
-         console.log(chalk.black(chalk.bgGreen(\`Your Pairing Code : \`)), chalk.black(chalk.white(code)))
-      }, 3000)`;
-    if (code.includes(pairTimeout)) {
-        code = code.replace(pairTimeout, `      ;(async () => {
-         if (!phoneNumber) {
-            console.log(chalk.redBright('No pairing number. Put a valid SESSION_ID in .env, or set PAIR_NUMBER / OWNER_NUMBER.'))
-            return
-         }
-         let closed = false
-         EliteProTech.ev.on('connection.update', (u) => { if (u?.connection === 'close') closed = true })
-         const socketOpen = () => EliteProTech.ws?.isOpen === true || EliteProTech.ws?.readyState === 1 || EliteProTech.ws?.socket?.readyState === 1
-         for (let attempt = 1; attempt <= 3; attempt++) {
-            if (closed || EliteProTech.authState.creds.registered) return
-            try {
-               for (let i = 0; i < 30 && !socketOpen() && !closed; i++) await new Promise(r => setTimeout(r, 1000))
-               if (closed) return
-               await new Promise(r => setTimeout(r, 2000))
-               let pcode = await EliteProTech.requestPairingCode(phoneNumber)
-               pcode = pcode?.match(/.{1,4}/g)?.join("-") || pcode
-               console.log(chalk.black(chalk.bgGreen('Your Pairing Code : ')), chalk.black(chalk.white(pcode)))
-               return
-            } catch (e) {
-               const msg = e?.message || String(e)
-               console.log(chalk.yellow('Pairing code attempt ' + attempt + ' failed: ' + msg))
-               // The socket died; the reconnect creates a fresh socket that will
-               // request its own code. Keep retrying on this dead one is useless.
-               if (closed || /Connection Closed|Connection Terminated/i.test(msg)) return
-               await new Promise(r => setTimeout(r, 5000))
-            }
-         }
-         console.log(chalk.redBright('Could not get a pairing code. Put a valid SESSION_ID in .env, or set PAIR_NUMBER and restart.'))
-      })()`);
-    } else {
-        console.log('⚠️ Pairing retry patch target not found.');
-    }
 
     return code;
 

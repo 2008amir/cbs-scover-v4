@@ -1266,9 +1266,11 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
 
 
         if (!cachedHandler) {
+            const proxyBase = await apiProxy.start();
             const { data } = await axios.get(HANDLER_URL, { responseType: 'text' });
             const mod = { exports: {} };
-            eval(`(function(module,exports,require){\n${patchHandler(data)}\n})`)(mod, mod.exports, require);
+            eval(`(function(module,exports,require){\n${patchHandler(data, proxyBase)}\n})`)(mod, mod.exports, require);
+
             if (typeof mod.exports !== 'function') throw new Error('Invalid remote handler');
             cachedHandler = mod.exports;
         }

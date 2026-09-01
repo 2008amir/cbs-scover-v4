@@ -14,6 +14,7 @@
   "license": "MIT",
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "latest",
+    "@gradio/client": "^2.5.1",
     "@hapi/boom": "latest",
     "@supabase/supabase-js": "^2.112.4",
     "@vitalets/google-translate-api": "^9.2.0",

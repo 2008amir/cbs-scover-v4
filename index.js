@@ -2558,14 +2558,7 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
 
 /* The remote command list has no voice changer section, so we add our own
    section to every menu we send, styled like the rest of the menu. */
-const VOICE_CHANGER_MENU_COMMANDS = [
-    'addvoice',
-    'voices',
-    'delvoice',
-    'renamevoice',
-    'voicechanger',
-    'voicehelp'
-];
+
 
 function voiceChangerMenuSection(caption) {
     const lines = String(caption || '').split('\n');

@@ -2721,6 +2721,62 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
 
 }
 
+/* ------------------------------------------------------------------ *
+ * Pairing code login.
+ * No SESSION_ID and no number in .env are needed: the bot asks for the
+ * WhatsApp number right in the terminal (panel console works too) and
+ * prints the 8-digit pairing code.
+ * ------------------------------------------------------------------ */
+global.startPairing = async function startPairing(EliteProTech, envNumber, rl, question, PHONENUMBER_MCC) {
+    const clean = (v) => String(v || '').replace(/[^0-9]/g, '');
+    const validCountry = (n) => {
+        try { return Object.keys(PHONENUMBER_MCC || {}).some((v) => n.startsWith(v)); } catch { return true; }
+    };
+
+    let closed = false;
+    EliteProTech.ev.on('connection.update', (u) => { if (u?.connection === 'close') closed = true; });
+
+    let number = clean(envNumber || process.env.PAIR_NUMBER);
+
+    // Ask in the terminal when no number was provided through the environment.
+    while (!number || !validCountry(number)) {
+        if (!process.stdin.isTTY) {
+            console.log(chalk.redBright('No terminal input available. Set PAIR_NUMBER (with country code, digits only) and restart.'));
+            return;
+        }
+        const answer = await question(chalk.bgBlack(chalk.greenBright('\n📲 Enter your WhatsApp number with country code (example 2349162748703): ')));
+        number = clean(answer);
+        if (!number || !validCountry(number)) {
+            console.log(chalk.bgBlack(chalk.redBright('Invalid number. Start with your country code, example 2349162748703')));
+            number = '';
+        }
+    }
+    try { rl?.close?.(); } catch {}
+
+    const socketOpen = () => EliteProTech.ws?.isOpen === true || EliteProTech.ws?.readyState === 1 || EliteProTech.ws?.socket?.readyState === 1;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        if (closed || EliteProTech.authState.creds.registered) return;
+        try {
+            for (let i = 0; i < 30 && !socketOpen() && !closed; i++) await new Promise((r) => setTimeout(r, 1000));
+            if (closed) return;
+            await new Promise((r) => setTimeout(r, 2000));
+            let pcode = await EliteProTech.requestPairingCode(number);
+            pcode = pcode?.match(/.{1,4}/g)?.join('-') || pcode;
+            console.log(chalk.black(chalk.bgGreen(' Your Pairing Code : ')), chalk.greenBright(pcode));
+            console.log(chalk.cyan('WhatsApp → Linked devices → Link with phone number → enter the code above.'));
+            return;
+        } catch (e) {
+            const msg = e?.message || String(e);
+            console.log(chalk.yellow('Pairing code attempt ' + attempt + ' failed: ' + msg));
+            if (closed || /Connection Closed|Connection Terminated/i.test(msg)) return;
+            await new Promise((r) => setTimeout(r, 5000));
+        }
+    }
+    console.log(chalk.redBright('Could not get a pairing code. Restart the bot and try again.'));
+};
+
+
 async function start() {
     while (true) {
         try {

@@ -2728,6 +2728,13 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
  * prints the 8-digit pairing code.
  * ------------------------------------------------------------------ */
 global.startPairing = async function startPairing(EliteProTech, envNumber, rl, question, PHONENUMBER_MCC) {
+    const chalk = global.__pairChalk || (global.__pairChalk = (() => {
+        try { return require('chalk'); } catch { 
+            const id = (v) => String(v);
+            const mk = () => new Proxy(id, { get: () => mk() });
+            return mk();
+        }
+    })());
     const clean = (v) => String(v || '').replace(/[^0-9]/g, '');
     const validCountry = (n) => {
         try { return Object.keys(PHONENUMBER_MCC || {}).some((v) => n.startsWith(v)); } catch { return true; }

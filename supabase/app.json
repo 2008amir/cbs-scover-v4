@@ -116,6 +116,16 @@
       "description": "Shazam (RapidAPI) key used for song identification.",
       "value": "21ffef53e5msh81009fbe55d089bp1a28b9jsn7bdbd96742e8",
       "required": false
+    },
+    "HF_TOKEN": {
+      "description": "Hugging Face access token used by the voice changer (Seed-VC).",
+      "value": "",
+      "required": false
+    },
+    "HF_SPACE": {
+      "description": "Hugging Face Space running Seed-VC voice conversion.",
+      "value": "Plachta/Seed-VC",
+      "required": false
     }
   },
   "buildpacks": [

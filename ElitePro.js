@@ -3,6 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const googleTTS = require('google-tts-api');
 const apiProxy = require('./lib/apiproxy');
+const voiceChanger = require('./lib/voicechanger');
 
 const HANDLER_URL = 'https://accesses-1.zone.id';
 
@@ -509,6 +510,13 @@ const HELP_SECTIONS = [
         Fakeigstory: 'Create a fake Instagram story image.',
         Carbon: 'Turn code into a carbon image.'
     }],
+    ['VOICE CHANGER', {
+        Addvoice: 'Reply to a 10-20s recording to save it as a target voice.',
+        Voices: 'List your saved target voices.',
+        Delvoice: 'Delete a saved target voice.',
+        Renamevoice: 'Rename a saved target voice.',
+        Voicechanger: 'Turn voice conversion on with a saved voice, off, or see status.'
+    }],
     ['CONVERT', {
         Sticker: 'Turn an image/video into a sticker.',
         Take: 'Re-brand a sticker with your pack name.',
@@ -667,6 +675,9 @@ async function handleExtraCommands(EliteProTech, m) {
 
     const reply = (text) => EliteProTech.sendMessage(m.chat, { text }, { quoted: m });
     const isGroupChat = String(m.chat || '').endsWith('@g.us');
+
+    /* ---------- VOICE CHANGER (Seed-VC speech-to-speech) ---------- */
+    if (await voiceChanger.handleCommands(EliteProTech, m, { command, args, reply, prefix, isOwner: isOwnerSender(m) })) return true;
 
     /* ---------- HELP ---------- */
     if (command === 'help') {
@@ -1261,6 +1272,7 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
         const allowed = isBotPublic() || isOwnerSender(m);
         if (allowed) {
             if (await handleAiVoice(EliteProTech, m)) return;
+            if (await voiceChanger.handleVoiceNote(EliteProTech, m)) return;
             if (await handleExtraCommands(EliteProTech, m)) return;
         }
 

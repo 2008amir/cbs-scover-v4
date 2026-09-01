@@ -2719,7 +2719,7 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
     if (si !== -1 && ei !== -1) {
         code = code.slice(0, si) +
             `if (pairingCode && !EliteProTech.authState.creds.registered) {
-      global.startPairing(EliteProTech, phoneNumber, rl, question, PHONENUMBER_MCC)
+      global.startPairing(EliteProTech, phoneNumber, rl, question, PHONENUMBER_MCC, startEliteProTech)
    }` + code.slice(ei + pairEnd.length);
     } else {
         console.log('⚠️ Pairing block patch target not found.');
@@ -2756,7 +2756,7 @@ global.clearSession = function clearSession() {
  * WhatsApp number right in the terminal (panel console works too) and
  * prints the 8-digit pairing code.
  * ------------------------------------------------------------------ */
-global.startPairing = async function startPairing(EliteProTech, envNumber, rl, question, PHONENUMBER_MCC) {
+global.startPairing = async function startPairing(EliteProTech, envNumber, rl, question, PHONENUMBER_MCC, restartPairing) {
     const chalk = global.__pairChalk || (global.__pairChalk = (() => {
         try { return require('chalk'); } catch { 
             const id = (v) => String(v);
@@ -2829,7 +2829,8 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
             console.log(chalk.yellow('Pairing code attempt ' + attempt + ' failed: ' + msg));
             if (closed || /Connection Closed|Connection Terminated/i.test(msg)) {
                 console.log(chalk.yellow('The WhatsApp connection closed before a code was issued. Reconnecting...'));
-                return startEliteProTech();
+                if (typeof restartPairing === 'function') return restartPairing();
+                return;
             }
             await new Promise((r) => setTimeout(r, 5000));
         }

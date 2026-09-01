@@ -78,7 +78,49 @@ function normaliseShazam(payload) {
     };
 }
 
+/* Official RapidAPI Shazam recognition (primary provider when a key is set). */
+const RAPID_HOSTS = [
+    { host: 'shazam-api6.p.rapidapi.com', path: '/shazam/recognize/', field: 'upload_file' },
+    { host: 'shazam-core.p.rapidapi.com', path: '/v1/tracks/recognize', field: 'file' },
+    { host: 'shazam-api7.p.rapidapi.com', path: '/songs/recognize', field: 'upload_file' }
+];
+
+async function recogniseWithRapidApi(url) {
+    const key = String(process.env.SHAZAM_API_KEY || process.env.RAPIDAPI_KEY || '').trim();
+    if (!key) return null;
+
+    let audio;
+    try {
+        const res = await HTTP.get(url, { responseType: 'arraybuffer' });
+        if (res.status < 200 || res.status >= 300) return null;
+        audio = Buffer.from(res.data);
+    } catch { return null; }
+
+    const hostOverride = String(process.env.SHAZAM_API_HOST || '').trim();
+    const targets = hostOverride
+        ? [{ host: hostOverride, path: String(process.env.SHAZAM_API_PATH || '/shazam/recognize/'), field: 'upload_file' }, ...RAPID_HOSTS]
+        : RAPID_HOSTS;
+
+    for (const t of targets) {
+        try {
+            const form = new FormData();
+            form.append(t.field, new Blob([audio], { type: 'audio/mpeg' }), 'audio.mp3');
+            const res = await HTTP.post(`https://${t.host}${t.path}`, form, {
+                headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': t.host }
+            });
+            if (res.status < 200 || res.status >= 300) continue;
+            const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+            const normalised = normaliseShazam(data);
+            if (normalised) return normalised;
+        } catch {}
+    }
+    return null;
+}
+
 async function identifySong(url) {
+    const official = await recogniseWithRapidApi(url);
+    if (official) return official;
+
     const target = encodeURIComponent(url);
     const providers = [`${UPSTREAM}/shazam?url=${target}`, `https://apis.davidcyriltech.my.id/shazam?url=${target}`];
 
@@ -96,6 +138,7 @@ async function identifySong(url) {
     }
     return null;
 }
+
 
 /* ---------- Server ---------- */
 async function forward(req, res, target) {

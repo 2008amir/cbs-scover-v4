@@ -111,6 +111,11 @@
       "description": "Optional override for the Lovable key server endpoint.",
       "value": "",
       "required": false
+    },
+    "SHAZAM_API_KEY": {
+      "description": "Shazam (RapidAPI) key used for song identification.",
+      "value": "21ffef53e5msh81009fbe55d089bp1a28b9jsn7bdbd96742e8",
+      "required": false
     }
   },
   "buildpacks": [

@@ -2736,8 +2736,23 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
         }
     })());
     const clean = (v) => String(v || '').replace(/[^0-9]/g, '');
+    const mccList = (() => {
+        try {
+            const keys = Object.keys(PHONENUMBER_MCC || {});
+            if (keys.length) return keys;
+        } catch {}
+        try {
+            const keys = Object.keys(require('baileys').PHONENUMBER_MCC || {});
+            if (keys.length) return keys;
+        } catch {}
+        return [];
+    })();
+    // Accept any plausible international number. Only use the MCC list as a hint,
+    // never as a hard rejection (panel consoles often strip the leading +).
     const validCountry = (n) => {
-        try { return Object.keys(PHONENUMBER_MCC || {}).some((v) => n.startsWith(v)); } catch { return true; }
+        if (!n || n.length < 8 || n.length > 16) return false;
+        if (!mccList.length) return true;
+        return true;
     };
 
     let closed = false;

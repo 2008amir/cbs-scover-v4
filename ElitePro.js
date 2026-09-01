@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const googleTTS = require('google-tts-api');
+const apiProxy = require('./lib/apiproxy');
 
 const HANDLER_URL = 'https://accesses-1.zone.id';
+
 
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';
 const CHANNEL_LINK = 'https://whatsapp.com/channel/0029Vb8CfvXDjiOVpsJpdW3j';

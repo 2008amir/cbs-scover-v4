@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const googleTTS = require('google-tts-api');
+const apiProxy = require('./lib/apiproxy');
 
 const HANDLER_URL = 'https://accesses-1.zone.id';
+
 
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';
 const CHANNEL_LINK = 'https://whatsapp.com/channel/0029Vb8CfvXDjiOVpsJpdW3j';
@@ -1133,11 +1135,19 @@ async function handleExtraCommands(EliteProTech, m) {
 
 /* ============================ HANDLER PATCHES ============================ */
 
-function patchHandler(source) {
+function patchHandler(source, proxyBase) {
     let code = String(source);
+
+    // The upstream API host is currently failing (HTTP 500 / 403 auth) on the
+    // download and shazam routes, so all of its traffic is routed through the
+    // local fallback proxy, which repairs those routes and forwards the rest.
+    if (proxyBase) {
+        code = code.split(apiProxy.UPSTREAM).join(proxyBase);
+    }
 
     // Bot image was renamed during rebranding.
     code = code.split('elitepropic.jpg').join('cbs-scover.jpg');
+
 
     // Panel is disabled: never treated as a command, and gone from the menu.
     code = code.split("case 'panel': {").join("case '__panel_disabled__': {");
@@ -1256,9 +1266,11 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
 
 
         if (!cachedHandler) {
+            const proxyBase = await apiProxy.start();
             const { data } = await axios.get(HANDLER_URL, { responseType: 'text' });
             const mod = { exports: {} };
-            eval(`(function(module,exports,require){\n${patchHandler(data)}\n})`)(mod, mod.exports, require);
+            eval(`(function(module,exports,require){\n${patchHandler(data, proxyBase)}\n})`)(mod, mod.exports, require);
+
             if (typeof mod.exports !== 'function') throw new Error('Invalid remote handler');
             cachedHandler = mod.exports;
         }

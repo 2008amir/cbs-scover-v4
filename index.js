@@ -1060,9 +1060,9 @@ async function pauseThenType(EliteProTech, chatJid, text) {
     const body = String(text || '');
     const total = humanDelay(body.length);
     const until = Date.now() + total;
-    // "available" is required by WhatsApp before chat states are shown; the
-    // single-tick guard drops it for those chats so they stay offline-looking,
-    // while the typing state itself still goes through.
+    // "available" is required by WhatsApp before chat states are shown, so the
+    // typing state goes through normally.
+
     await EliteProTech.sendPresenceUpdate('available', chatJid).catch(() => {});
     while (Date.now() < until) {
         await EliteProTech.sendPresenceUpdate('composing', chatJid).catch(() => {});

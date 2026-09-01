@@ -2556,17 +2556,73 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
 
 /* ============================ MENU ============================ */
 
+/* The remote command list has no voice changer section, so we add our own
+   section to every menu we send, styled like the rest of the menu. */
+
+
+function voiceChangerMenuSection(caption) {
+    const lines = String(caption || '').split('\n');
+
+    // Menu command lines look like "│𖥟╾ Play". Clone that exact style plus the
+    // header/footer that wrap a section so the new section fits right in.
+    const itemRe = /^(\s*\S{0,4}[│┃|]\S{0,4}\s*[╾-]?\s*)([A-Za-z])/;
+    const firstItem = lines.findIndex(l => itemRe.test(l));
+
+    const names = ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp'];
+
+    if (firstItem === -1) {
+        const prefix = global.prefix || '.';
+        return `╭──〔 *VOICE CHANGER* 〕──\n` +
+            names.map(n => `│ ${prefix}${n.toLowerCase()}`).join('\n') +
+            `\n╰────────────────`;
+    }
+
+    const itemPrefix = lines[firstItem].match(itemRe)[1];
+    const items = names.map(n => `${itemPrefix}${n}`).join('\n');
+
+    // Header: the nearest non-empty line above the items, with its section
+    // name swapped for ours. Footer: first non-item line after the section.
+    let header = '';
+    for (let i = firstItem - 1; i >= 0 && i >= firstItem - 3; i--) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        if (/[A-Z]{3,}/.test(line.replace(/\*/g, ''))) {
+            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, 'VOICE CHANGER');
+        }
+        break;
+    }
+
+    let footer = '';
+    for (let i = firstItem; i < lines.length; i++) {
+        if (itemRe.test(lines[i])) continue;
+        if (lines[i].trim()) footer = lines[i];
+        break;
+    }
+
+    return [header, items, footer].filter(Boolean).join('\n');
+}
+
+function withVoiceChangerMenu(caption) {
+    const text = String(caption || '');
+    if (/VOICE\s*CHANGER/i.test(text)) return text;
+    return `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
+}
+
 
 global.sendMenu = async function sendMenu(EliteProTech, m, image, caption) {
     const img = typeof image === 'string' ? { url: image } : image;
+    const full = withVoiceChangerMenu(caption);
 
     try {
-        await EliteProTech.sendMessage(m.chat, { image: img, caption }, { quoted: m });
+        await EliteProTech.sendMessage(m.chat, { image: img, caption: full }, { quoted: m });
     } catch (err) {
         console.error('Menu image failed, sending text menu:', err?.message || err);
-        await EliteProTech.sendMessage(m.chat, { text: caption }, { quoted: m }).catch(() => {});
+        await EliteProTech.sendMessage(m.chat, { text: full }, { quoted: m }).catch(() => {});
     }
 };
+
+global.withVoiceChangerMenu = withVoiceChangerMenu;
+
 
 
 

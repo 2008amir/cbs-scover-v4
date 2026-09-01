@@ -471,8 +471,8 @@ function styleKnowledgeBlock(mode, gender, latest, exchanges) {
             ? global.detectConversationLanguage(latest || '', [])
             : 'MIXED';
         const stage = (Number(exchanges) || 0) < 4 ? 'first' : 'ongoing';
-        for (const row of videoKnowledge.relevantVideoKnowledge(latest || '', style, stage)) {
-            lines.push(`- ${row.category} [${row.language}, ${row.tone}]: ${row.pattern_summary}`);
+        for (const row of videoKnowledge.relevantVideoKnowledge(latest || '', style, stage, 18)) {
+            lines.push(`- ${row.category} [${row.language}, ${row.tone}${row.style_tags ? `, ${row.style_tags}` : ''}]: ${row.pattern_summary}`);
         }
     } catch (err) {
         // A cache-read problem must never affect the reply.
@@ -481,11 +481,13 @@ function styleKnowledgeBlock(mode, gender, latest, exchanges) {
 
     if (!lines.length) return '';
     return `
-RELEVANT_CACHED_ROMANTIC_KNOWLEDGE (generalised patterns only — never quote or reuse any wording from it)
-${lines.slice(0, 14).join('\n')}
+RELEVANT_CACHED_ROMANTIC_KNOWLEDGE (generalised patterns learned from public online video material — never quote or reuse any wording from it)
+${lines.slice(0, 30).join('\n')}
+- USE THIS ACTIVELY: before writing, pick the one or two patterns that fit this exact moment (greeting, affection, teasing, reassurance, keeping the chat alive, code-switching, emoji habits) and let them shape HOW you phrase your own original words.
 - These are habits learned from public material, NOT facts about this person and NOT scripts. Always write an ORIGINAL reply.
 - Never become romantic just because a romantic pattern appears here; follow the real stage of this conversation.
 - This knowledge NEVER outranks the real conversation: latest message > current conversation > recent chat > memory > detected language > personality > this knowledge.`;
+
 }
 
 

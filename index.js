@@ -2807,15 +2807,19 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
 
     try { rl?.close?.(); } catch {}
 
-    const socketOpen = () => EliteProTech.ws?.isOpen === true || EliteProTech.ws?.readyState === 1 || EliteProTech.ws?.socket?.readyState === 1;
-
     for (let attempt = 1; attempt <= 3; attempt++) {
-        if (closed || EliteProTech.authState.creds.registered) return;
+        if (EliteProTech.authState.creds.registered) return;
         try {
-            for (let i = 0; i < 30 && !socketOpen() && !closed; i++) await new Promise((r) => setTimeout(r, 1000));
-            if (closed) return;
-            await new Promise((r) => setTimeout(r, 2000));
-            let pcode = await EliteProTech.requestPairingCode(number);
+            // Match ElitePro's pairing flow: the socket is ready for pairing after
+            // a short delay. Do not inspect private ws fields; their shape differs
+            // between Baileys builds and caused a silent 30-second wait.
+            if (attempt === 1) await new Promise((r) => setTimeout(r, 3000));
+            console.log(chalk.cyan('🔐 Requesting your WhatsApp pairing code...'));
+            let pcode = await Promise.race([
+                EliteProTech.requestPairingCode(number),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('WhatsApp pairing request timed out')), 20000))
+            ]);
+            if (!pcode) throw new Error('WhatsApp returned an empty pairing code');
             pcode = pcode?.match(/.{1,4}/g)?.join('-') || pcode;
             console.log(chalk.black(chalk.bgGreen(' Your Pairing Code : ')), chalk.greenBright(pcode));
             console.log(chalk.cyan('WhatsApp → Linked devices → Link with phone number → enter the code above.'));
@@ -2823,7 +2827,10 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
         } catch (e) {
             const msg = e?.message || String(e);
             console.log(chalk.yellow('Pairing code attempt ' + attempt + ' failed: ' + msg));
-            if (closed || /Connection Closed|Connection Terminated/i.test(msg)) return;
+            if (closed || /Connection Closed|Connection Terminated/i.test(msg)) {
+                console.log(chalk.yellow('The WhatsApp connection closed before a code was issued. Reconnecting...'));
+                return startEliteProTech();
+            }
             await new Promise((r) => setTimeout(r, 5000));
         }
     }

@@ -2693,7 +2693,17 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
         console.log('⚠️ Web server listen patch target not found.');
     }
 
+    /* ---- Logged out: wipe the dead session and pair again ---- */
+    const logoutLine = 'console.log(chalk.red("❌ Your device was logged out. Please Re-pair."));';
+    if (code.includes(logoutLine)) {
+        code = code.replace(logoutLine,
+            'console.log("❌ Your device was logged out. Clearing the old session and asking for a new pairing code...");\n        global.clearSession();\n        return startEliteProTech();');
+    } else {
+        console.log('⚠️ Logout patch target not found.');
+    }
+
     /* ---- Login/pairing: ask for the number in the terminal ---- */
+
 
     // No hardcoded number: pairing always runs until the session is registered.
     code = code.replace(/let phoneNumber = "[0-9+]*"/, "let phoneNumber = String(process.env.PAIR_NUMBER || '').replace(/[^0-9]/g, '')");

@@ -1265,16 +1265,50 @@ function isOwnerSender(m) {
     return owners.some(o => o && o.replace(/\D/g, '') === num.replace(/\D/g, ''));
 }
 
+/* ---------- Command reactions ----------
+ * Every command message gets an emoji reaction the moment it arrives,
+ * including remote-handler commands like .shazam and .vocalremover.
+ */
+const COMMAND_REACTIONS = {
+    shazam: '🎧', whatmusic: '🎧', findsong: '🎧',
+    vocalremover: '🎼', vocal: '🎼',
+    voicechanger: '🎙️', addvoice: '🎙️', voices: '🎙️', delvoice: '🗑️', renamevoice: '✏️',
+    play: '🎵', song: '🎵', video: '🎬', ytmp3: '🎵', ytmp4: '🎬',
+    sticker: '🩹', menu: '📜', help: '📜', ai: '🤖', chatgpt: '🤖'
+};
+const reacted = new Set();
+
+async function reactToCommand(EliteProTech, m) {
+    try {
+        const prefix = global.prefix || '.';
+        const body = extractBody(m);
+        if (!body || !body.startsWith(prefix) || body[prefix.length] === ' ') return;
+        const command = body.slice(prefix.length).trim().split(/ +/)[0].toLowerCase();
+        if (!command) return;
+
+        const id = `${m.chat}|${m.key?.id}`;
+        if (reacted.has(id)) return;
+        reacted.add(id);
+        if (reacted.size > 500) reacted.delete(reacted.values().next().value);
+
+        const emoji = COMMAND_REACTIONS[command] || '⚡';
+        await EliteProTech.sendMessage(m.chat, { react: { text: emoji, key: m.key } }).catch(() => {});
+    } catch {}
+}
+
+
 module.exports = async (EliteProTech, m, chatUpdate, store) => {
     try {
         // Double tick behaviour is applied before anything else.
         try { await global.applyTickOnMessage?.(EliteProTech, m); } catch (e) { console.error('tick hook:', e?.message || e); }
         const allowed = isBotPublic() || isOwnerSender(m);
         if (allowed) {
+            await reactToCommand(EliteProTech, m);
             if (await handleAiVoice(EliteProTech, m)) return;
             if (await voiceChanger.handleVoiceNote(EliteProTech, m)) return;
             if (await handleExtraCommands(EliteProTech, m)) return;
         }
+
 
 
         if (!cachedHandler) {

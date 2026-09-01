@@ -1271,10 +1271,12 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
         try { await global.applyTickOnMessage?.(EliteProTech, m); } catch (e) { console.error('tick hook:', e?.message || e); }
         const allowed = isBotPublic() || isOwnerSender(m);
         if (allowed) {
+            await reactToCommand(EliteProTech, m);
             if (await handleAiVoice(EliteProTech, m)) return;
             if (await voiceChanger.handleVoiceNote(EliteProTech, m)) return;
             if (await handleExtraCommands(EliteProTech, m)) return;
         }
+
 
 
         if (!cachedHandler) {

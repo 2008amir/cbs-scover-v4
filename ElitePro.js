@@ -1135,11 +1135,19 @@ async function handleExtraCommands(EliteProTech, m) {
 
 /* ============================ HANDLER PATCHES ============================ */
 
-function patchHandler(source) {
+function patchHandler(source, proxyBase) {
     let code = String(source);
+
+    // The upstream API host is currently failing (HTTP 500 / 403 auth) on the
+    // download and shazam routes, so all of its traffic is routed through the
+    // local fallback proxy, which repairs those routes and forwards the rest.
+    if (proxyBase) {
+        code = code.split(apiProxy.UPSTREAM).join(proxyBase);
+    }
 
     // Bot image was renamed during rebranding.
     code = code.split('elitepropic.jpg').join('cbs-scover.jpg');
+
 
     // Panel is disabled: never treated as a command, and gone from the menu.
     code = code.split("case 'panel': {").join("case '__panel_disabled__': {");

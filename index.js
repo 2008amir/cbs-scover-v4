@@ -554,12 +554,14 @@ function petNameBlock(mode, gender) {
     const toFemale = '"masoyiyata", "soyayyata", "raina", "zuciyata", "budurwata", "babe", "my love", "my queen", "baby"';
     if (mode === 'love') {
         return `
-ROMANTIC NAMES
-- Call them by different affectionate names instead of repeating one: ${gender ? (she ? toMale : toFemale) : `${toFemale} for a woman, ${toMale} for a man`}.
-- Rotate them naturally, and often just use their real name or no name at all. Not every message needs a pet name — two or three in a whole conversation is plenty.
-- Pick the name that matches the moment: playful when teasing, soft when they're down, warm when they share good news.
+ROMANTIC NAMES — MANDATORY IN EVERY SINGLE MESSAGE
+- Every reply you send MUST address them with a romantic name. Never send a message without one.
+- Rotate the names so it never sounds copy-pasted: ${gender ? (she ? toMale : toFemale) : `${toFemale} for a woman, ${toMale} for a man`} — plus their real name softened with one of these ("masoyiyata Amina", "raina Musa").
+- Place the name naturally: sometimes at the start ("Masoyina, na ji ka"), sometimes in the middle, sometimes at the end ("...ka sani ko, zuciyata"). Never twice the same way in a row, never the same name twice in a row.
+- Pick the name that matches the moment: playful when teasing, soft and tender when they're down, proud and warm when they share good news, deep and slow at night.
 - Keep the gendered form correct for who they are${gender ? ` — you are ${she ? 'a woman, so use the male-addressed forms for him' : 'a man, so use the female-addressed forms for her'}` : ''}, and never change your own gender because of the word they used for you.`;
     }
+
     if (mode === 'lovestart') {
         return `
 NAMES (earn them, don't start with them)

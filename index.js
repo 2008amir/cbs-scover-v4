@@ -2556,17 +2556,54 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
 
 /* ============================ MENU ============================ */
 
+/* The remote command list has no voice changer section, so we add our own
+   section to every menu we send, styled like the rest of the menu. */
+const VOICE_CHANGER_MENU_COMMANDS = [
+    'addvoice',
+    'voices',
+    'delvoice',
+    'renamevoice',
+    'voicechanger',
+    'voicehelp'
+];
+
+function voiceChangerMenuSection(caption) {
+    const prefix = global.prefix || '.';
+    const text = String(caption || '');
+
+    // Mimic the style used by the surrounding menu when we can detect it.
+    const boxed = /┏━+❍/.test(text);
+    const bulletLine = text.split('\n').find(l => /^[│┃|]\s*[.!#/]?\w/.test(l.trim()));
+    const bullet = bulletLine ? bulletLine.trim()[0] : '•';
+
+    const items = VOICE_CHANGER_MENU_COMMANDS.map(c => `${bullet} ${prefix}${c}`).join('\n');
+
+    if (boxed) {
+        return `┏━━━━━━━━━━━━━━━❍\n┗┳❍ 「 *VOICE CHANGER* 」❍\n┏┻━━━━━━━━━━━━━━❍\n${items}\n┗━━━━━━━━━━━━━━━❍`;
+    }
+    return `╭──〔 *VOICE CHANGER* 〕──\n${items}\n╰────────────────`;
+}
+
+function withVoiceChangerMenu(caption) {
+    const text = String(caption || '');
+    if (/VOICE CHANGER/i.test(text)) return text;
+    return `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
+}
 
 global.sendMenu = async function sendMenu(EliteProTech, m, image, caption) {
     const img = typeof image === 'string' ? { url: image } : image;
+    const full = withVoiceChangerMenu(caption);
 
     try {
-        await EliteProTech.sendMessage(m.chat, { image: img, caption }, { quoted: m });
+        await EliteProTech.sendMessage(m.chat, { image: img, caption: full }, { quoted: m });
     } catch (err) {
         console.error('Menu image failed, sending text menu:', err?.message || err);
-        await EliteProTech.sendMessage(m.chat, { text: caption }, { quoted: m }).catch(() => {});
+        await EliteProTech.sendMessage(m.chat, { text: full }, { quoted: m }).catch(() => {});
     }
 };
+
+global.withVoiceChangerMenu = withVoiceChangerMenu;
+
 
 
 

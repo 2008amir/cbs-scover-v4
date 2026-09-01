@@ -598,7 +598,6 @@ const HELP_SECTIONS = [
         Owner: 'Show the bot owner contact.',
         Help: 'Explain what every command does, section by section.',
         Doubletick: 'Always show the sender 2 delivered ticks, never a blue tick (all chats, this chat, or one number).',
-        Singletick: 'Keep the sender on 1 offline tick even when you are online or reply (all chats, this chat, or one number).',
         Dpdownload: 'Download a profile picture — send it inside the person\'s DM, or use .dpdownload <phone number>.',
         'Chat-id': 'Show a chat id — .chat-id in the chat, or .chat-id <phone number>.',
         Menu: 'Show the full command list.',
@@ -1097,10 +1096,10 @@ async function handleExtraCommands(EliteProTech, m) {
     }
 
 
-    /* ---------- DOUBLE TICK / SINGLE TICK ---------- */
-    if (command === 'doubletick' || command === 'singletick') {
+    /* ---------- DOUBLE TICK ---------- */
+    if (command === 'doubletick') {
         if (typeof global.handleTickCommand === 'function') {
-            await global.handleTickCommand(EliteProTech, m, args, command === 'singletick' ? 'single' : 'double', prefix);
+            await global.handleTickCommand(EliteProTech, m, args, 'double', prefix);
         } else {
             await reply('⚠️ Tick control is not loaded yet, try again in a moment.');
         }
@@ -1175,7 +1174,7 @@ function patchHandler(source) {
     // GROUP
     addAfter('│𖥟╾ Tagadmin\n', '│𖥟╾ Antideletegroup-public\n│𖥟╾ Antideletegroup-private\n│𖥟╾ Grouppp\n│𖥟╾ Groupfullpp\n│𖥟╾ Groupstatus\n', 'group-commands');
     // GENERAL
-    addAfter('│𖥟╾ Owner\n', '│𖥟╾ Help\n│𖥟╾ Doubletick\n│𖥟╾ Singletick\n│𖥟╾ Dpdownload\n│𖥟╾ Chat-id\n', 'general-commands');
+    addAfter('│𖥟╾ Owner\n', '│𖥟╾ Help\n│𖥟╾ Doubletick\n│𖥟╾ Dpdownload\n│𖥟╾ Chat-id\n', 'general-commands');
 
     // DOWNLOADS
     addAfter('│𖥟╾ Play\n', '│𖥟╾ Vocalremover\n│𖥟╾ Get\n', 'download-commands');
@@ -1247,7 +1246,7 @@ function isOwnerSender(m) {
 
 module.exports = async (EliteProTech, m, chatUpdate, store) => {
     try {
-        // Tick behaviour (double / single tick) is applied before anything else.
+        // Double tick behaviour is applied before anything else.
         try { await global.applyTickOnMessage?.(EliteProTech, m); } catch (e) { console.error('tick hook:', e?.message || e); }
         const allowed = isBotPublic() || isOwnerSender(m);
         if (allowed) {

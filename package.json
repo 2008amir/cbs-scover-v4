@@ -5,7 +5,6 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "postinstall": "node scripts/patch-baileys-single-tick.js",
     "start": "node index.js",
     "dev": "node -e \"const http=require('http'),fs=require('fs');const html=fs.readFileSync('lib/index.html');http.createServer((q,s)=>{s.writeHead(200,{'Content-Type':'text/html'});s.end(html)}).listen(process.env.PORT||8080,()=>console.log('preview server ready'))\" --",
     "build:dev": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('lib/index.html','dist/index.html')\"",

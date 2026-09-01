@@ -2892,18 +2892,125 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
 };
 
 
-async function start() {
-    while (true) {
+/* =====================================================================
+   STARTUP
+   The command handler is fetched from the source host. When that host is
+   down (it currently answers HTTP 402 "DEPLOYMENT_DISABLED"), the old
+   code looped forever without ever listening on $PORT, so hosting panels
+   marked the whole server OFFLINE. Now:
+     • the last working source is cached on disk and reused offline,
+     • extra/override hosts can be supplied with SOURCE_URL / SOURCE_URLS,
+     • a tiny keep-alive web server holds $PORT so the panel stays online
+       and shows why the handler could not load.
+   ===================================================================== */
+const SOURCE_CACHE_FILE = path.join(__dirname, 'database', 'handler.cache.js');
+
+function sourceUrls() {
+    const extra = String(process.env.SOURCE_URLS || process.env.SOURCE_URL || '')
+        .split(',').map(v => v.trim()).filter(Boolean);
+    return [...new Set([...extra, SOURCE_URL])];
+}
+
+function readCachedSource() {
+    try {
+        const cached = fs.readFileSync(SOURCE_CACHE_FILE, 'utf8');
+        if (cached && cached.length > 1000) return cached;
+    } catch {}
+    return null;
+}
+
+function writeCachedSource(source) {
+    try {
+        fs.mkdirSync(path.dirname(SOURCE_CACHE_FILE), { recursive: true });
+        fs.writeFileSync(SOURCE_CACHE_FILE, source);
+    } catch {}
+}
+
+async function fetchSource() {
+    let lastError = null;
+    for (const url of sourceUrls()) {
         try {
-            const res = await axios.get(SOURCE_URL, { timeout: 15000 });
-            const code = `(function(){\n${patchSource(res.data)}\n})();`;
+            const res = await axios.get(url, { timeout: 20000, responseType: 'text' });
+            const body = typeof res.data === 'string' ? res.data : String(res.data || '');
+            if (res.status >= 200 && res.status < 300 && body.length > 1000) {
+                writeCachedSource(body);
+                return body;
+            }
+            lastError = new Error(`${url} answered HTTP ${res.status}`);
+        } catch (err) {
+            const status = err?.response?.status;
+            lastError = new Error(`${url} ${status ? 'answered HTTP ' + status : (err?.message || 'request failed')}`);
+        }
+    }
+    throw lastError || new Error('no handler source available');
+}
+
+// Holds $PORT so the hosting panel reports the process as online even while
+// the handler source host is unreachable.
+let keepAlive = null;
+let keepAliveState = 'starting';
+function startKeepAlive() {
+    if (keepAlive) return;
+    const port = Number(process.env.PORT || 3000);
+    try {
+        keepAlive = require('http').createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end(`${global.botname || 'BOT'} keep-alive\nhandler: ${keepAliveState}\n`);
+        });
+        keepAlive.on('error', (e) => {
+            keepAlive = null;
+            if (e?.code !== 'EADDRINUSE') console.log('Keep-alive server error:', e?.message || e);
+        });
+        keepAlive.listen(port, '0.0.0.0', () => console.log(`🌐 Keep-alive server on port ${port}`));
+    } catch (e) {
+        keepAlive = null;
+    }
+}
+
+function stopKeepAlive() {
+    if (!keepAlive) return;
+    try { keepAlive.close(); } catch {}
+    keepAlive = null;
+}
+
+async function start() {
+    startKeepAlive();
+    let attempt = 0;
+    while (true) {
+        attempt++;
+        let source = null;
+        try {
+            source = await fetchSource();
+        } catch (err) {
+            keepAliveState = 'source host unreachable: ' + (err?.message || err);
+            const cached = readCachedSource();
+            if (cached) {
+                console.log('⚠️  Handler source host unreachable (' + (err?.message || err) + '). Using the last cached handler.');
+                source = cached;
+            } else {
+                console.log('Retrying startup...', err?.message || err);
+                if (attempt === 1) {
+                    console.log('ℹ️  The handler host is offline (HTTP 402 / DEPLOYMENT_DISABLED). Set SOURCE_URL to a working handler host, or start the bot once while it is up so it can be cached.');
+                }
+                await new Promise(resolve => setTimeout(resolve, 15000));
+                continue;
+            }
+        }
+
+        try {
+            stopKeepAlive();
+            const code = `(function(){\n${patchSource(source)}\n})();`;
             eval(code);
+            keepAliveState = 'loaded';
             break;
         } catch (err) {
-            console.log('Retrying startup...', err?.message || err);
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            keepAliveState = 'handler failed to run: ' + (err?.message || err);
+            console.log('Handler failed to run:', err?.message || err);
+            startKeepAlive();
+            await new Promise(resolve => setTimeout(resolve, 15000));
         }
     }
 }
 
 start();
+

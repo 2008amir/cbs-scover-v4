@@ -21,7 +21,10 @@ const KEY_SERVER_APIKEY = String(
     'sb_publishable_LAQSH-LGZXzne6e3TBVmCg_FsANe1sk'
 ).trim();
 
-const BOT_KEYS_TOKEN = String(process.env.BOT_KEYS_TOKEN || '').trim();
+// Read lazily: hosting panels inject env vars after module load.
+function botKeysToken() {
+    return String(process.env.BOT_KEYS_TOKEN || process.env.KEY_SERVER_TOKEN || '').trim();
+}
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 let cache = { at: 0, keys: null };
@@ -52,6 +55,7 @@ function normalise(payload) {
 }
 
 async function fetchFromServer() {
+    const BOT_KEYS_TOKEN = botKeysToken();
     if (!BOT_KEYS_TOKEN) throw new Error('BOT_KEYS_TOKEN is not configured on this server');
     const { data } = await axios.post(
         KEY_SERVER_URL,

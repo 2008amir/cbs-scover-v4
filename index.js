@@ -1,10 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-// Make sure the single-tick delivery-receipt patch is in place BEFORE baileys is
-// ever required. Hosts that install with --ignore-scripts skip postinstall, which
-// is why single tick kept falling back to double ticks while online.
-try { require('./scripts/patch-baileys-single-tick').apply({ quiet: true }); } catch {}
 
 // Separate, isolated internet video knowledge engine. Live chat only ever calls
 // its cache readers (relevantVideoKnowledge) — never its network functions.

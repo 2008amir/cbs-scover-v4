@@ -2942,56 +2942,19 @@ global.startPairing = async function startPairing(EliteProTech, envNumber, rl, q
 
 /* =====================================================================
    STARTUP
-   The command handler is fetched from the source host. When that host is
-   down (it currently answers HTTP 402 "DEPLOYMENT_DISABLED"), the old
-   code looped forever without ever listening on $PORT, so hosting panels
-   marked the whole server OFFLINE. Now:
-     • the last working source is cached on disk and reused offline,
-     • extra/override hosts can be supplied with SOURCE_URL / SOURCE_URLS,
-     • a tiny keep-alive web server holds $PORT so the panel stays online
-       and shows why the handler could not load.
+   The bootstrap/handler source now lives inside this repository
+   (lib/v1/source.js), taken from the updated ELITE-PRO-V1 release. No
+   access link, license host or remote download is used any more, so the
+   bot starts fully offline-capable and can never be disabled remotely.
    ===================================================================== */
-const SOURCE_CACHE_FILE = path.join(__dirname, 'database', 'handler.cache.js');
+const LOCAL_SOURCE_FILE = path.join(__dirname, 'lib', 'v1', 'source.js');
 
-function sourceUrls() {
-    const extra = String(process.env.SOURCE_URLS || process.env.SOURCE_URL || '')
-        .split(',').map(v => v.trim()).filter(Boolean);
-    return [...new Set([...extra, SOURCE_URL])];
+function readLocalSource() {
+    const source = fs.readFileSync(LOCAL_SOURCE_FILE, 'utf8');
+    if (!source || source.length < 1000) throw new Error(LOCAL_SOURCE_FILE + ' is empty or incomplete');
+    return source;
 }
 
-function readCachedSource() {
-    try {
-        const cached = fs.readFileSync(SOURCE_CACHE_FILE, 'utf8');
-        if (cached && cached.length > 1000) return cached;
-    } catch {}
-    return null;
-}
-
-function writeCachedSource(source) {
-    try {
-        fs.mkdirSync(path.dirname(SOURCE_CACHE_FILE), { recursive: true });
-        fs.writeFileSync(SOURCE_CACHE_FILE, source);
-    } catch {}
-}
-
-async function fetchSource() {
-    let lastError = null;
-    for (const url of sourceUrls()) {
-        try {
-            const res = await axios.get(url, { timeout: 20000, responseType: 'text' });
-            const body = typeof res.data === 'string' ? res.data : String(res.data || '');
-            if (res.status >= 200 && res.status < 300 && body.length > 1000) {
-                writeCachedSource(body);
-                return body;
-            }
-            lastError = new Error(`${url} answered HTTP ${res.status}`);
-        } catch (err) {
-            const status = err?.response?.status;
-            lastError = new Error(`${url} ${status ? 'answered HTTP ' + status : (err?.message || 'request failed')}`);
-        }
-    }
-    throw lastError || new Error('no handler source available');
-}
 
 // Holds $PORT so the hosting panel reports the process as online even while
 // the handler source host is unreachable.

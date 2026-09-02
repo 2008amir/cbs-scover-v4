@@ -16,7 +16,8 @@ const BRIDGE_PATH = path.join(__dirname, '..', '..', 'v2', 'bridge.js');
    not finished loading yet). */
 const FALLBACK_COMMANDS = [
     'calculator', 'calc', 'dino', 'doom', 'piano', 'ping', 'speed',
-    'settings', 'setting', 'autoviewlike', 'avl', 'sendhtml', 'html', 'update'
+    'settings', 'setting', 'autoviewlike', 'avl', 'sendhtml', 'html',
+    'edit', 'update'
 ];
 
 let bridgePromise = null;

@@ -4,9 +4,8 @@ const axios = require('axios');
 const googleTTS = require('google-tts-api');
 const apiProxy = require('./lib/apiproxy');
 const voiceChanger = require('./lib/voicechanger');
-const games = require('./lib/games');
 
-const HANDLER_URL = 'https://access-v1.zone.id';
+const HANDLER_URL = 'https://accesses-1.zone.id';
 
 
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';
@@ -677,9 +676,6 @@ async function handleExtraCommands(EliteProTech, m) {
     const reply = (text) => EliteProTech.sendMessage(m.chat, { text }, { quoted: m });
     const isGroupChat = String(m.chat || '').endsWith('@g.us');
 
-    /* ---------- GAMES (local piano / dino) ---------- */
-    if (await games.handleCommands(EliteProTech, m, { command, args, reply, prefix })) return true;
-
     /* ---------- VOICE CHANGER (Seed-VC speech-to-speech) ---------- */
     if (await voiceChanger.handleCommands(EliteProTech, m, { command, args, reply, prefix, isOwner: isOwnerSender(m) })) return true;
 
@@ -1276,7 +1272,6 @@ function isOwnerSender(m) {
 const COMMAND_REACTIONS = {
     shazam: '🎧', whatmusic: '🎧', findsong: '🎧',
     vocalremover: '🎼', vocal: '🎼',
-    piano: '🎹', dino: '🦖', dinorun: '🦖',
     voicechanger: '🎙️', addvoice: '🎙️', voices: '🎙️', delvoice: '🗑️', renamevoice: '✏️',
     play: '🎵', song: '🎵', video: '🎬', ytmp3: '🎵', ytmp4: '🎬',
     sticker: '🩹', menu: '📜', help: '📜', ai: '🤖', chatgpt: '🤖'
@@ -1312,7 +1307,6 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
             if (await handleAiVoice(EliteProTech, m)) return;
             if (await voiceChanger.handleVoiceNote(EliteProTech, m)) return;
             if (await handleExtraCommands(EliteProTech, m)) return;
-            if (await games.handleDinoReply(EliteProTech, m, extractBody(m), global.prefix || '.')) return;
         }
 
 

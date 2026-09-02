@@ -2560,7 +2560,7 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
    section to every menu we send, styled like the rest of the menu. */
 
 
-function menuSection(caption, title, names) {
+function voiceChangerMenuSection(caption) {
     const lines = String(caption || '').split('\n');
 
     // Menu command lines look like "│𖥟╾ Play". Clone that exact style plus the
@@ -2568,10 +2568,11 @@ function menuSection(caption, title, names) {
     const itemRe = /^(\s*\S{0,4}[│┃|]\S{0,4}\s*[╾-]?\s*)([A-Za-z])/;
     const firstItem = lines.findIndex(l => itemRe.test(l));
 
+    const names = ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp'];
 
     if (firstItem === -1) {
         const prefix = global.prefix || '.';
-        return `╭──〔 *${title}* 〕──\n` +
+        return `╭──〔 *VOICE CHANGER* 〕──\n` +
             names.map(n => `│ ${prefix}${n.toLowerCase()}`).join('\n') +
             `\n╰────────────────`;
     }
@@ -2586,7 +2587,7 @@ function menuSection(caption, title, names) {
         const line = lines[i];
         if (!line.trim()) continue;
         if (/[A-Z]{3,}/.test(line.replace(/\*/g, ''))) {
-            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, title);
+            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, 'VOICE CHANGER');
         }
         break;
     }
@@ -2601,23 +2602,10 @@ function menuSection(caption, title, names) {
     return [header, items, footer].filter(Boolean).join('\n');
 }
 
-function voiceChangerMenuSection(caption) {
-    return menuSection(caption, 'VOICE CHANGER', ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp']);
-}
-
-function gamesMenuSection(caption) {
-    return menuSection(caption, 'GAMES', ['Piano', 'Dino']);
-}
-
 function withVoiceChangerMenu(caption) {
-    let text = String(caption || '');
-    if (!/VOICE\s*CHANGER/i.test(text)) {
-        text = `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
-    }
-    if (!/〔 \*GAMES\*|GAMES/i.test(text)) {
-        text = `${text.replace(/\s+$/, '')}\n\n${gamesMenuSection(text)}`;
-    }
-    return text;
+    const text = String(caption || '');
+    if (/VOICE\s*CHANGER/i.test(text)) return text;
+    return `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
 }
 
 

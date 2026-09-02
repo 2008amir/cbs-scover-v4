@@ -2583,17 +2583,21 @@ function menuSection(caption, title, names) {
     const itemPrefix = lines[firstItem].match(itemRe)[1];
     const items = names.map(n => `${itemPrefix}${n}`).join('\n');
 
-    // Header: the nearest non-empty line above the items, with its section
-    // name swapped for ours. Footer: first non-item line after the section.
+    // Header: clone the whole framed header block above the first section and
+    // swap its section name for ours. Footer: first non-item line after it.
     let header = '';
-    for (let i = firstItem - 1; i >= 0 && i >= firstItem - 3; i--) {
+    const above = [];
+    for (let i = firstItem - 1; i >= 0 && i >= firstItem - 4; i--) {
         const line = lines[i];
-        if (!line.trim()) continue;
-        if (/[A-Z]{3,}/.test(line.replace(/\*/g, ''))) {
-            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, title);
-        }
-        break;
+        if (!line.trim()) break;
+        above.unshift(line);
     }
+    const titleIdx = above.findIndex(l => /[A-Z]{3,}/.test(l.replace(/\*/g, '')));
+    if (titleIdx !== -1) {
+        above[titleIdx] = above[titleIdx].replace(/[A-Z][A-Z0-9 &\-]{2,}/, title);
+        header = above.join('\n');
+    }
+
 
     let footer = '';
     for (let i = firstItem; i < lines.length; i++) {

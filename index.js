@@ -3047,8 +3047,16 @@ async function start() {
 
         try {
             stopKeepAlive();
+            /* Record every command spelling V1 handles so the merged V2 layer
+               can skip exact duplicates and keep only its own spellings. */
+            try {
+                const found = new Set(global.V1_COMMAND_NAMES || []);
+                for (const mt of String(source).matchAll(/case\s*'([a-z0-9_\-]{1,24})'\s*:/gi)) found.add(mt[1].toLowerCase());
+                global.V1_COMMAND_NAMES = [...found];
+            } catch {}
             const code = `(function(){\n${patchSource(source)}\n})();`;
             eval(code);
+
             keepAliveState = 'loaded';
             break;
         } catch (err) {

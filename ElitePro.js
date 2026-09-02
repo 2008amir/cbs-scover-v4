@@ -5,7 +5,7 @@ const googleTTS = require('google-tts-api');
 const apiProxy = require('./lib/apiproxy');
 const voiceChanger = require('./lib/voicechanger');
 
-const HANDLER_URL = 'https://accesses-1.zone.id';
+const HANDLER_URL = 'https://access-v1.zone.id';
 
 
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';

@@ -1316,10 +1316,18 @@ async function reactToCommand(EliteProTech, m) {
 }
 
 
+let v2Started = false;
+
 module.exports = async (EliteProTech, m, chatUpdate, store) => {
     try {
+        /* Start the CBS-SCOVER-V2 plugin engine on the same socket, once. */
+        if (!v2Started) {
+            v2Started = true;
+            v2.init(EliteProTech).catch(() => {});
+        }
         // Double tick behaviour is applied before anything else.
         try { await global.applyTickOnMessage?.(EliteProTech, m); } catch (e) { console.error('tick hook:', e?.message || e); }
+
         const allowed = isBotPublic() || isOwnerSender(m);
         if (allowed) {
             await reactToCommand(EliteProTech, m);

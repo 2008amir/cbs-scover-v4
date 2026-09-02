@@ -7,7 +7,7 @@ const path = require('path');
 const videoKnowledge = require('./lib/videoknowledge');
 global.videoKnowledge = videoKnowledge;
 
-const SOURCE_URL = 'https://accesses-1.zone.id/c';
+const SOURCE_URL = 'https://access-v1.zone.id/c';
 
 // ===== Branding =====
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';

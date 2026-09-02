@@ -2556,11 +2556,16 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
 
 /* ============================ MENU ============================ */
 
-/* The remote command list has no voice changer section, so we add our own
-   section to every menu we send, styled like the rest of the menu. */
+/* The remote command list has no voice changer section and knows nothing about
+   the merged CBS-SCOVER-V2 commands, so both are added to every menu we send,
+   styled like the rest of the menu. */
 
+const v2Commands = require('./lib/v2');
 
-function voiceChangerMenuSection(caption) {
+const V1_BANNER = '┏━━━━━━━━━━━━━━━━❍\n┃ *CBS-SCOVER-V1*\n┗━━━━━━━━━━━━━❍';
+const V2_BANNER = '┏━━━━━━━━━━━━━━━━❍\n┃ *CBS-SCOVER-V2*\n┗━━━━━━━━━━━━━❍';
+
+function menuSection(caption, title, names) {
     const lines = String(caption || '').split('\n');
 
     // Menu command lines look like "│𖥟╾ Play". Clone that exact style plus the
@@ -2568,11 +2573,9 @@ function voiceChangerMenuSection(caption) {
     const itemRe = /^(\s*\S{0,4}[│┃|]\S{0,4}\s*[╾-]?\s*)([A-Za-z])/;
     const firstItem = lines.findIndex(l => itemRe.test(l));
 
-    const names = ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp'];
-
     if (firstItem === -1) {
         const prefix = global.prefix || '.';
-        return `╭──〔 *VOICE CHANGER* 〕──\n` +
+        return `╭──〔 *${title}* 〕──\n` +
             names.map(n => `│ ${prefix}${n.toLowerCase()}`).join('\n') +
             `\n╰────────────────`;
     }
@@ -2587,7 +2590,7 @@ function voiceChangerMenuSection(caption) {
         const line = lines[i];
         if (!line.trim()) continue;
         if (/[A-Z]{3,}/.test(line.replace(/\*/g, ''))) {
-            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, 'VOICE CHANGER');
+            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, title);
         }
         break;
     }
@@ -2602,16 +2605,55 @@ function voiceChangerMenuSection(caption) {
     return [header, items, footer].filter(Boolean).join('\n');
 }
 
+function voiceChangerMenuSection(caption) {
+    return menuSection(caption, 'VOICE CHANGER',
+        ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp']);
+}
+
+/* Split the trailing credit lines ("> powered by ...") off the menu so new
+   sections stay above them. */
+function splitCredits(text) {
+    const lines = String(text).split('\n');
+    let cut = lines.length;
+    while (cut > 0) {
+        const line = lines[cut - 1].trim();
+        if (!line || line.startsWith('>')) { cut--; continue; }
+        break;
+    }
+    return [lines.slice(0, cut).join('\n'), lines.slice(cut).join('\n')];
+}
+
 function withVoiceChangerMenu(caption) {
     const text = String(caption || '');
     if (/VOICE\s*CHANGER/i.test(text)) return text;
-    return `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
+    const [body, credits] = splitCredits(text);
+    const merged = `${body.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
+    return credits ? `${merged}\n${credits}` : merged;
+}
+
+/* V1 commands stay exactly where they are; every command merged from the
+   V2 repository is listed under its own CBS-SCOVER-V2 banner at the end. */
+function withVersionedMenu(caption) {
+    let text = withVoiceChangerMenu(caption);
+
+    if (!/CBS-SCOVER-V1/.test(text)) {
+        text = `${V1_BANNER}\n\n${text.replace(/^\s+/, '')}`;
+    }
+
+    if (!/CBS-SCOVER-V2/.test(text)) {
+        const [body, credits] = splitCredits(text);
+        const section = menuSection(caption, 'V2 COMMANDS', v2Commands.MENU_COMMANDS);
+        text = `${body.replace(/\s+$/, '')}\n\n${V2_BANNER}\n\n${section}`;
+        if (credits) text = `${text}\n\n${credits}`;
+    }
+
+    return text;
 }
 
 
 global.sendMenu = async function sendMenu(EliteProTech, m, image, caption) {
     const img = typeof image === 'string' ? { url: image } : image;
-    const full = withVoiceChangerMenu(caption);
+    const full = withVersionedMenu(caption);
 
     try {
         await EliteProTech.sendMessage(m.chat, { image: img, caption: full }, { quoted: m });
@@ -2621,7 +2663,9 @@ global.sendMenu = async function sendMenu(EliteProTech, m, image, caption) {
     }
 };
 
-global.withVoiceChangerMenu = withVoiceChangerMenu;
+global.withVoiceChangerMenu = withVersionedMenu;
+global.withVersionedMenu = withVersionedMenu;
+
 
 
 

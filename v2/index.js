@@ -414,7 +414,7 @@ function restartBot(delay = 5000) {
     }, delay)
 }
 
-async function start() {
+export async function start() {
     if (isConnecting) return
     isConnecting = true
 

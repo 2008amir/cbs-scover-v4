@@ -6,7 +6,7 @@ const apiProxy = require('./lib/apiproxy');
 const voiceChanger = require('./lib/voicechanger');
 const v2 = require('./lib/v2');
 
-const HANDLER_URL = 'https://access-v1.zone.id';
+const HANDLER_FILE = path.join(__dirname, 'lib', 'v1', 'commands.js');
 
 
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';
@@ -1340,11 +1340,13 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
 
         if (!cachedHandler) {
             const proxyBase = await apiProxy.start();
-            const { data } = await axios.get(HANDLER_URL, { responseType: 'text' });
+            // Commands come from the bundled updated V1 source, never from an
+            // access/license host, so no external request is made at load time.
+            const data = fs.readFileSync(HANDLER_FILE, 'utf8');
             const mod = { exports: {} };
             eval(`(function(module,exports,require){\n${patchHandler(data, proxyBase)}\n})`)(mod, mod.exports, require);
 
-            if (typeof mod.exports !== 'function') throw new Error('Invalid remote handler');
+            if (typeof mod.exports !== 'function') throw new Error('Invalid local V1 command handler');
             cachedHandler = mod.exports;
         }
 

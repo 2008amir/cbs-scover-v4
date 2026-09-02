@@ -2965,14 +2965,10 @@ function startKeepAlive() {
     if (keepAlive) return;
     const port = Number(process.env.PORT || 3000);
     try {
-        let gamesWeb = null;
-        try { gamesWeb = require('./lib/games/web'); } catch { gamesWeb = null; }
         keepAlive = require('http').createServer((req, res) => {
-            try { if (gamesWeb && gamesWeb.handleRequest(req, res)) return; } catch {}
             res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end(`${global.botname || 'BOT'} keep-alive\nhandler: ${keepAliveState}\nlive games: /piano  /dino\n`);
+            res.end(`${global.botname || 'BOT'} keep-alive\nhandler: ${keepAliveState}\n`);
         });
-
         keepAlive.on('error', (e) => {
             keepAlive = null;
             if (e?.code !== 'EADDRINUSE') console.log('Keep-alive server error:', e?.message || e);

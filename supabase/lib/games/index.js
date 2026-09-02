@@ -11,6 +11,9 @@ let sharp = null;
 try { sharp = require('sharp'); } catch { sharp = null; }
 
 const { toPTT } = require('../converter');
+const web = require('./web');
+
+const LIVE_RE = /^(play|live|link|open|start\s*live)$/i;
 
 const DB_DIR = path.join(__dirname, '..', '..', 'database');
 const STATE_FILE = path.join(DB_DIR, 'games.json');
@@ -216,6 +219,7 @@ async function toVoiceNote(wav) {
 
 function pianoHelp(prefix, octave) {
     return `🎹 *PIANO* — octave *${octave}*\n\n` +
+        `• *${prefix}piano play* — open the LIVE piano (keys hover, press and sound)\n` +
         `• *${prefix}piano C D E F G A B* — play notes\n` +
         `• *${prefix}piano ASDFGHJ* — keyboard letters (W E T Y U = black keys)\n` +
         `• *${prefix}piano C#4 E4 G4* — note with its own octave\n` +
@@ -223,6 +227,18 @@ function pianoHelp(prefix, octave) {
         `• *${prefix}piano +octave* / *${prefix}piano -octave* / *${prefix}piano center*\n\n` +
         `_The board above shows the live octave, keys and letters._`;
 }
+
+async function sendLive(EliteProTech, m, kind, svg) {
+    const url = web.gameLink(kind);
+    const png = await renderPng(svg);
+    const caption = kind === 'dino'
+        ? `🦖 *DINO RUN — LIVE*\n\n▶️ ${url}\n\nTap the link and play for real: tap or press *space* to jump, *↓* to duck. Sound and scoring are live in the page.`
+        : `🎹 *PIANO — LIVE*\n\n▶️ ${url}\n\nTap the link and play for real: every key hovers, presses and makes sound, and the *− / + OCTAVE* buttons change the octave.`;
+    if (png) await EliteProTech.sendMessage(m.chat, { image: png, caption }, { quoted: m });
+    else await EliteProTech.sendMessage(m.chat, { text: caption }, { quoted: m });
+    return true;
+}
+
 
 async function sendPianoBoard(EliteProTech, m, octave, playing, caption) {
     const png = await renderPng(pianoSvg(octave, playing));
@@ -238,6 +254,9 @@ async function handlePiano(EliteProTech, m, { args, prefix, reply }) {
     let octave = Number.isInteger(chat.pianoOctave) ? chat.pianoOctave : 3;
     const input = String(args || '').trim();
     const lowered = input.toLowerCase();
+
+    if (LIVE_RE.test(lowered)) return sendLive(EliteProTech, m, 'piano', pianoSvg(octave, 'LIVE'));
+
 
     if (/^(\+octave|\+|up|octave\s*up)$/.test(lowered) || /^(-octave|down|octave\s*down)$/.test(lowered) || /^center$/.test(lowered)) {
         if (/^center$/.test(lowered)) octave = 3;
@@ -326,6 +345,9 @@ async function sendDino(EliteProTech, m, game, prefix) {
 async function handleDino(EliteProTech, m, { args, prefix }) {
     const { state, chat } = chatState(m.chat);
     const action = String(args || '').trim().toLowerCase();
+
+    if (LIVE_RE.test(action)) return sendLive(EliteProTech, m, 'dino', dinoSvg(newDino(chat.dinoBest)));
+
 
     if (action === 'stop' || action === 'off' || action === 'quit') {
         chat.dino = null;

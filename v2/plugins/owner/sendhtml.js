@@ -1,7 +1,8 @@
 import { sendRichHtml } from '../../lib/richhtml.js'
 
 let handler = async (m, { EliteProTech }) => {
-    const html = m.quoted?.text?.trim()
+    const quoted = m.quoted?.text?.trim()
+    const html = quoted ? `<div style="min-height:392px;padding:22px;border-radius:16px;background:linear-gradient(145deg,#25213d,#101018);border:1px solid #49436e;color:#fff;font-family:Arial">${quoted}</div>` : ''
     if (!html) {
         return await m.reply(`Reply to a text message containing HTML.\n\nUsage: ${global.prefix || ''}sendhtml`)
     }

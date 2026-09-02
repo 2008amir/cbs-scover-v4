@@ -679,6 +679,10 @@ async function handleExtraCommands(EliteProTech, m) {
     /* ---------- VOICE CHANGER (Seed-VC speech-to-speech) ---------- */
     if (await voiceChanger.handleCommands(EliteProTech, m, { command, args, reply, prefix, isOwner: isOwnerSender(m) })) return true;
 
+    /* ---------- CBS-SCOVER-V2 commands ---------- */
+    if (await v2.handleCommands(EliteProTech, m, { command, args, reply, prefix, isOwner: isOwnerSender(m) })) return true;
+
+
     /* ---------- HELP ---------- */
     if (command === 'help') {
         if (args) {

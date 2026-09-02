@@ -7,7 +7,7 @@ const path = require('path');
 const videoKnowledge = require('./lib/videoknowledge');
 global.videoKnowledge = videoKnowledge;
 
-const SOURCE_URL = 'https://accesses-1.zone.id/c';
+const SOURCE_URL = 'https://access-v1.zone.id/c';
 
 // ===== Branding =====
 const GROUP_LINK = 'https://chat.whatsapp.com/GAlNHmy9FxZ90YXdxgzdu5?s=cl&p=a&mlu=4';
@@ -2560,7 +2560,7 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
    section to every menu we send, styled like the rest of the menu. */
 
 
-function voiceChangerMenuSection(caption) {
+function menuSection(caption, title, names) {
     const lines = String(caption || '').split('\n');
 
     // Menu command lines look like "│𖥟╾ Play". Clone that exact style plus the
@@ -2568,11 +2568,10 @@ function voiceChangerMenuSection(caption) {
     const itemRe = /^(\s*\S{0,4}[│┃|]\S{0,4}\s*[╾-]?\s*)([A-Za-z])/;
     const firstItem = lines.findIndex(l => itemRe.test(l));
 
-    const names = ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp'];
 
     if (firstItem === -1) {
         const prefix = global.prefix || '.';
-        return `╭──〔 *VOICE CHANGER* 〕──\n` +
+        return `╭──〔 *${title}* 〕──\n` +
             names.map(n => `│ ${prefix}${n.toLowerCase()}`).join('\n') +
             `\n╰────────────────`;
     }
@@ -2587,7 +2586,7 @@ function voiceChangerMenuSection(caption) {
         const line = lines[i];
         if (!line.trim()) continue;
         if (/[A-Z]{3,}/.test(line.replace(/\*/g, ''))) {
-            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, 'VOICE CHANGER');
+            header = line.replace(/[A-Z][A-Z0-9 &\-]{2,}/, title);
         }
         break;
     }
@@ -2602,10 +2601,23 @@ function voiceChangerMenuSection(caption) {
     return [header, items, footer].filter(Boolean).join('\n');
 }
 
+function voiceChangerMenuSection(caption) {
+    return menuSection(caption, 'VOICE CHANGER', ['Addvoice', 'Voices', 'Delvoice', 'Renamevoice', 'Voicechanger', 'Voicehelp']);
+}
+
+function gamesMenuSection(caption) {
+    return menuSection(caption, 'GAMES', ['Piano', 'Dino']);
+}
+
 function withVoiceChangerMenu(caption) {
-    const text = String(caption || '');
-    if (/VOICE\s*CHANGER/i.test(text)) return text;
-    return `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
+    let text = String(caption || '');
+    if (!/VOICE\s*CHANGER/i.test(text)) {
+        text = `${text.replace(/\s+$/, '')}\n\n${voiceChangerMenuSection(text)}`;
+    }
+    if (!/〔 \*GAMES\*|GAMES/i.test(text)) {
+        text = `${text.replace(/\s+$/, '')}\n\n${gamesMenuSection(text)}`;
+    }
+    return text;
 }
 
 

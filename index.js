@@ -2986,27 +2986,17 @@ function stopKeepAlive() {
 
 async function start() {
     startKeepAlive();
-    let attempt = 0;
     while (true) {
-        attempt++;
         let source = null;
         try {
-            source = await fetchSource();
+            source = readLocalSource();
         } catch (err) {
-            keepAliveState = 'source host unreachable: ' + (err?.message || err);
-            const cached = readCachedSource();
-            if (cached) {
-                console.log('⚠️  Handler source host unreachable (' + (err?.message || err) + '). Using the last cached handler.');
-                source = cached;
-            } else {
-                console.log('Retrying startup...', err?.message || err);
-                if (attempt === 1) {
-                    console.log('ℹ️  The handler host is offline (HTTP 402 / DEPLOYMENT_DISABLED). Set SOURCE_URL to a working handler host, or start the bot once while it is up so it can be cached.');
-                }
-                await new Promise(resolve => setTimeout(resolve, 15000));
-                continue;
-            }
+            keepAliveState = 'local source unreadable: ' + (err?.message || err);
+            console.log('❌ Could not read the bundled V1 source:', err?.message || err);
+            await new Promise(resolve => setTimeout(resolve, 15000));
+            continue;
         }
+
 
         try {
             stopKeepAlive();

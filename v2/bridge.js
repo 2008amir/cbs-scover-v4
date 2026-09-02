@@ -125,7 +125,7 @@ export function commandNames({ excludeV1 = true } = {}) {
     const names = []
     for (const key of plugins.keys()) {
         if (typeof key !== 'string') continue
-        if (excludeV1 && V1_COMMANDS.has(key)) continue
+        if (excludeV1 && v1Commands().has(key)) continue
         names.push(key)
     }
     return names
@@ -134,7 +134,7 @@ export function commandNames({ excludeV1 = true } = {}) {
 export function owns(command) {
     const key = String(command || '').toLowerCase()
     if (!key) return false
-    if (V1_COMMANDS.has(key)) return false
+    if (v1Commands().has(key)) return false
     return plugins.has(key)
 }
 

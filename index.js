@@ -3089,8 +3089,10 @@ async function start() {
             keepAliveState = 'handler failed to run: ' + (err?.message || err);
             console.log('Handler failed to run:', err?.message || err);
             startKeepAlive();
+            if (await startV2Fallback('V1 handler failed to run: ' + (err?.message || err))) return;
             await new Promise(resolve => setTimeout(resolve, 15000));
         }
+
     }
 }
 

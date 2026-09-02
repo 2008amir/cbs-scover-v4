@@ -4,6 +4,7 @@ const axios = require('axios');
 const googleTTS = require('google-tts-api');
 const apiProxy = require('./lib/apiproxy');
 const voiceChanger = require('./lib/voicechanger');
+const v2 = require('./lib/v2');
 
 const HANDLER_URL = 'https://access-v1.zone.id';
 
@@ -667,7 +668,18 @@ async function handleExtraCommands(EliteProTech, m) {
 
     const prefix = global.prefix || '.';
     const body = extractBody(m);
-    if (!body || !body.startsWith(prefix)) return false;
+    if (!body) return false;
+
+    /* V2 shell keeps its own "$" prefix. */
+    if (body.startsWith('$')) {
+        return await v2.handleShell(EliteProTech, m, {
+            body,
+            reply: (text) => EliteProTech.sendMessage(m.chat, { text }, { quoted: m }),
+            isOwner: isOwnerSender(m)
+        });
+    }
+
+    if (!body.startsWith(prefix)) return false;
 
     const rest = body.slice(prefix.length).replace(/^\s+/, '');
     const command = (rest.split(/\s+/)[0] || '').toLowerCase();
@@ -678,6 +690,10 @@ async function handleExtraCommands(EliteProTech, m) {
 
     /* ---------- VOICE CHANGER (Seed-VC speech-to-speech) ---------- */
     if (await voiceChanger.handleCommands(EliteProTech, m, { command, args, reply, prefix, isOwner: isOwnerSender(m) })) return true;
+
+    /* ---------- CBS-SCOVER-V2 commands ---------- */
+    if (await v2.handleCommands(EliteProTech, m, { command, args, reply, prefix, isOwner: isOwnerSender(m) })) return true;
+
 
     /* ---------- HELP ---------- */
     if (command === 'help') {
@@ -1274,7 +1290,10 @@ const COMMAND_REACTIONS = {
     vocalremover: '🎼', vocal: '🎼',
     voicechanger: '🎙️', addvoice: '🎙️', voices: '🎙️', delvoice: '🗑️', renamevoice: '✏️',
     play: '🎵', song: '🎵', video: '🎬', ytmp3: '🎵', ytmp4: '🎬',
-    sticker: '🩹', menu: '📜', help: '📜', ai: '🤖', chatgpt: '🤖'
+    sticker: '🩹', menu: '📜', help: '📜', ai: '🤖', chatgpt: '🤖',
+    calculator: '🧮', calc: '🧮', dino: '🦖', doom: '🔫', piano: '🎹',
+    ping: '🏓', speed: '🏓', settings: '⚙️', setting: '⚙️',
+    autoviewlike: '👀', avl: '👀', sendhtml: '🧩', html: '🧩'
 };
 const reacted = new Set();
 

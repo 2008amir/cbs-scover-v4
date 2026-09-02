@@ -1290,7 +1290,10 @@ const COMMAND_REACTIONS = {
     vocalremover: '🎼', vocal: '🎼',
     voicechanger: '🎙️', addvoice: '🎙️', voices: '🎙️', delvoice: '🗑️', renamevoice: '✏️',
     play: '🎵', song: '🎵', video: '🎬', ytmp3: '🎵', ytmp4: '🎬',
-    sticker: '🩹', menu: '📜', help: '📜', ai: '🤖', chatgpt: '🤖'
+    sticker: '🩹', menu: '📜', help: '📜', ai: '🤖', chatgpt: '🤖',
+    calculator: '🧮', calc: '🧮', dino: '🦖', doom: '🔫', piano: '🎹',
+    ping: '🏓', speed: '🏓', settings: '⚙️', setting: '⚙️',
+    autoviewlike: '👀', avl: '👀', sendhtml: '🧩', html: '🧩'
 };
 const reacted = new Set();
 

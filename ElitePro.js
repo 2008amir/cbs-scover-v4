@@ -4,6 +4,7 @@ const axios = require('axios');
 const googleTTS = require('google-tts-api');
 const apiProxy = require('./lib/apiproxy');
 const voiceChanger = require('./lib/voicechanger');
+const v2 = require('./lib/v2');
 
 const HANDLER_URL = 'https://access-v1.zone.id';
 

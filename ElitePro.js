@@ -668,7 +668,18 @@ async function handleExtraCommands(EliteProTech, m) {
 
     const prefix = global.prefix || '.';
     const body = extractBody(m);
-    if (!body || !body.startsWith(prefix)) return false;
+    if (!body) return false;
+
+    /* V2 shell keeps its own "$" prefix. */
+    if (body.startsWith('$')) {
+        return await v2.handleShell(EliteProTech, m, {
+            body,
+            reply: (text) => EliteProTech.sendMessage(m.chat, { text }, { quoted: m }),
+            isOwner: isOwnerSender(m)
+        });
+    }
+
+    if (!body.startsWith(prefix)) return false;
 
     const rest = body.slice(prefix.length).replace(/^\s+/, '');
     const command = (rest.split(/\s+/)[0] || '').toLowerCase();

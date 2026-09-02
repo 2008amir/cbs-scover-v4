@@ -46,7 +46,8 @@ function v1Commands() {
 
     const files = [
         path.join(process.cwd(), 'ElitePro.js'),
-        path.join(process.cwd(), 'database', 'handler.cache.js')
+        path.join(process.cwd(), 'lib', 'v1', 'commands.js'),
+        path.join(process.cwd(), 'lib', 'v1', 'source.js')
     ]
     for (const file of files) {
         let src = ''

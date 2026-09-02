@@ -15,11 +15,9 @@ const BRIDGE_PATH = path.join(__dirname, '..', '..', 'v2', 'bridge.js');
 /* Commands V2 adds on top of V1 (used for the menu when the plugin engine has
    not finished loading yet). */
 const FALLBACK_COMMANDS = [
-    'calculator', 'calc', 'dino', 'doom', 'piano', 'ping', 'speed',
-    'settings', 'setting', 'autoviewlike', 'avl', 'avs', 'autolikestatus',
-    'autorecordtype', 'sendhtml', 'html', 'edit', 'update', 'stiker',
-    'tomp4', 'tovn', 'tovoice', 'tourl', 'totag', 'everyone', 'leavegroup',
-    'owners', 'removeowner', 'setfullpp', 'setfullprofilepicture'
+    'autoviewlike', 'avl', 'avs', 'calc', 'calculator', 'dino', 'doom',
+    'html', 'leavegroup', 'owners', 'piano', 'removeowner', 'sendhtml',
+    'setting', 'speed', 'tovoice'
 ];
 
 let bridgePromise = null;

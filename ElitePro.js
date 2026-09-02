@@ -1319,25 +1319,9 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
 
         if (!cachedHandler) {
             const proxyBase = await apiProxy.start();
-            let source = null;
-            const cacheFile = path.join(__dirname, 'database', 'handler.cache.js');
-            try {
-                const { data } = await axios.get(HANDLER_URL, { responseType: 'text', timeout: 20000 });
-                source = data;
-                try { fs.writeFileSync(cacheFile, String(data)); } catch {}
-            } catch (err) {
-                try { source = fs.readFileSync(cacheFile, 'utf8'); } catch {}
-                if (!source) {
-                    if (!global.__handlerWarned) {
-                        global.__handlerWarned = true;
-                        console.log('ℹ️  Remote handler host unreachable and no cached handler available — local commands only.');
-                    }
-                    return;
-                }
-            }
-
+            const { data } = await axios.get(HANDLER_URL, { responseType: 'text' });
             const mod = { exports: {} };
-            eval(`(function(module,exports,require){\n${patchHandler(source, proxyBase)}\n})`)(mod, mod.exports, require);
+            eval(`(function(module,exports,require){\n${patchHandler(data, proxyBase)}\n})`)(mod, mod.exports, require);
 
             if (typeof mod.exports !== 'function') throw new Error('Invalid remote handler');
             cachedHandler = mod.exports;
@@ -1348,4 +1332,3 @@ module.exports = async (EliteProTech, m, chatUpdate, store) => {
         console.error('Handler error:', err.message);
     }
 };
-

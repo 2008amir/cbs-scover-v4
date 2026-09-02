@@ -247,8 +247,7 @@ function nativeFlowSupport() {
     } catch { return null; }
 }
 
-// .piano play -> in-app WebView button (when supported) + a guaranteed visible
-// link-preview message so the chat always shows the piano.
+// .piano play -> real WhatsApp native-flow open_webview button (in-app WebView)
 async function sendPianoOnly(EliteProTech, m, svg) {
     const png = await renderPng(svg);
     const bail = nativeFlowSupport();
@@ -258,26 +257,32 @@ async function sendPianoOnly(EliteProTech, m, svg) {
             const buttons = [{
                 name: 'open_webview',
                 buttonParamsJson: JSON.stringify({
-                    display_text: '🎹 Play Piano',
-                    url: PIANO_SITE,
-                    merchant_url: PIANO_SITE,
-                    webview_presentation: 'FULL',
-                    in_app_webview: true
+                    title: '🎹 Play Piano',
+                    link: { in_app_webview: true, url: PIANO_SITE }
                 })
             }];
 
             const msg = bail.generateWAMessageFromContent(m.chat, {
-                interactiveMessage: bail.proto.Message.InteractiveMessage.create({
-                    body: bail.proto.Message.InteractiveMessage.Body.create({ text: PIANO_TEXT }),
-                    footer: bail.proto.Message.InteractiveMessage.Footer.create({ text: 'CBS-SCOVER' }),
-                    nativeFlowMessage: bail.proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                        buttons
-                    })
-                })
+                viewOnceMessage: {
+                    message: {
+                        interactiveMessage: bail.proto.Message.InteractiveMessage.create({
+                            body: bail.proto.Message.InteractiveMessage.Body.create({ text: PIANO_TEXT }),
+                            footer: bail.proto.Message.InteractiveMessage.Footer.create({ text: 'CBS-SCOVER' }),
+                            header: bail.proto.Message.InteractiveMessage.Header.create({
+                                title: '🎹 LIVE PIANO',
+                                hasMediaAttachment: false
+                            }),
+                            nativeFlowMessage: bail.proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                                buttons
+                            })
+                        })
+                    }
+                }
             }, { quoted: m, userJid: EliteProTech.user?.id });
 
             await EliteProTech.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
             console.log('[piano] WEBVIEW SUCCESS — open_webview native flow sent');
+            return true;
         } catch (err) {
             console.log('[piano] WEBVIEW FAILED, using URL FALLBACK:', err?.message || err);
         }
@@ -285,7 +290,7 @@ async function sendPianoOnly(EliteProTech, m, svg) {
         console.log('[piano] native-flow open_webview unsupported by installed Baileys — URL FALLBACK');
     }
 
-    // Always send a visible message (some clients never render native-flow buttons).
+    // URL FALLBACK (not an in-app WebView)
     try {
         await EliteProTech.sendMessage(m.chat, {
             text: `${PIANO_TEXT}\n\n▶️ ${PIANO_SITE}`,
@@ -304,15 +309,14 @@ async function sendPianoOnly(EliteProTech, m, svg) {
                 }
             }
         }, { quoted: m });
-        console.log('[piano] visible link-preview message sent');
     } catch (err) {
         console.log('[piano] fallback send failed:', err?.message || err);
-        const text = `${PIANO_TEXT}\n\n▶️ ${PIANO_SITE}`;
-        await EliteProTech.sendMessage(m.chat, { text }, { quoted: m }).catch(() => {});
+        await EliteProTech.sendMessage(m.chat, {
+            text: '❌ Unable to open the piano right now.\n\nPlease try again in a moment.'
+        }, { quoted: m }).catch(() => {});
     }
     return true;
 }
-
 
 
 async function sendLive(EliteProTech, m, kind, svg) {

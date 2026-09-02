@@ -17,21 +17,51 @@ import { smsg, bind, decorateSocket } from './lib/myfunc.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-/* Commands already provided by CBS-SCOVER-V1. V2 keeps the files, but the
-   V1 implementation stays in charge so nothing answers twice. */
-const V1_COMMANDS = new Set([
-    'menu', 'help', 'sticker', 's', 'stiker', 'toaudio', 'tomp3', 'tovideo', 'tomp4',
-    'toptt', 'tovn', 'tovoice', 'url', 'tourl', 'getpp', 'pp', 'yts', 'ytsearch',
-    'uptime', 'runtime', 'poll', 'tagall', 'everyone', 'totag', 'hidetag',
-    'add', 'kick', 'promote', 'demote', 'open', 'close', 'left', 'leavegroup',
-    'owner', 'addowner', 'delowner', 'removeowner', 'listowner', 'owners',
-    'mode', 'setprefix', 'setpp', 'setfullpp', 'setfullprofilepicture',
-    'delete', 'del', 'eval', 'autoread', 'autoviewstatus', 'avs',
-    'autolike', 'autolikestatus', 'autorecording', 'autotyping', 'autorecordtype'
-])
+/* Commands already provided by CBS-SCOVER-V1. V2 keeps the files, but when a
+   V2 command has the *exact same spelling* as a V1 command the V1
+   implementation stays in charge so nothing answers twice. Different
+   spellings (aliases V1 does not have) keep working from V2. */
+const STATIC_V1_COMMANDS = [
+    'menu', 'help', 'sticker', 's', 'toaudio', 'tomp3', 'tovideo',
+    'toptt', 'url', 'getpp', 'pp', 'yts', 'ytsearch',
+    'uptime', 'runtime', 'poll', 'tagall', 'hidetag',
+    'add', 'kick', 'promote', 'demote', 'open', 'close', 'left',
+    'owner', 'addowner', 'delowner', 'listowner',
+    'mode', 'setprefix', 'setpp',
+    'delete', 'del', 'eval', 'autoread', 'autoviewstatus',
+    'autolike', 'autorecording', 'autotyping'
+]
+
+/* Names are discovered from V1 itself (the cached remote handler + the local
+   ElitePro command file) so only true same-spelling duplicates are removed. */
+let v1Cache = null
+function v1Commands() {
+    if (v1Cache) return v1Cache
+    const names = new Set(STATIC_V1_COMMANDS)
+
+    for (const name of global.V1_COMMAND_NAMES || []) {
+        const key = String(name || '').toLowerCase().trim()
+        if (key) names.add(key)
+    }
+
+    const files = [
+        path.join(process.cwd(), 'ElitePro.js'),
+        path.join(process.cwd(), 'database', 'handler.cache.js')
+    ]
+    for (const file of files) {
+        let src = ''
+        try { src = fs.readFileSync(file, 'utf-8') } catch { continue }
+        for (const m of src.matchAll(/case\s*'([a-z0-9_\-]{1,24})'\s*:/gi)) names.add(m[1].toLowerCase())
+        for (const m of src.matchAll(/command\s*===\s*'([a-z0-9_\-]{1,24})'/gi)) names.add(m[1].toLowerCase())
+    }
+
+    v1Cache = names
+    return names
+}
 
 let ready = false
 let socket = null
+
 
 /* Keep V2 globals it depends on, without overwriting V1 branding. */
 function ensureGlobals() {

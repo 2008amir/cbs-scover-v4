@@ -3021,30 +3021,6 @@ function stopKeepAlive() {
     keepAlive = null;
 }
 
-/* When the V1 handler host is permanently unreachable the bot used to sit in
-   a retry loop forever: no WhatsApp connection, no pairing code, and the panel
-   showed the process as effectively dead. The complete CBS-SCOVER-V2 engine
-   lives locally, so it takes over the WhatsApp connection (pairing code
-   included) and every V2 command keeps working offline. */
-let v2FallbackStarted = false;
-async function startV2Fallback(reason) {
-    if (v2FallbackStarted) return true;
-    v2FallbackStarted = true;
-    keepAliveState = 'V1 handler offline, running CBS-SCOVER-V2 engine';
-    console.log('⚠️  ' + reason);
-    console.log('🚀 Starting the local CBS-SCOVER-V2 engine so the bot still pairs and answers commands.');
-    try {
-        const { pathToFileURL } = require('url');
-        const mod = await import(pathToFileURL(path.join(__dirname, 'v2', 'index.js')).href);
-        await mod.start();
-        return true;
-    } catch (err) {
-        v2FallbackStarted = false;
-        console.log('❌ CBS-SCOVER-V2 engine failed to start:', err?.message || err);
-        return false;
-    }
-}
-
 async function start() {
     startKeepAlive();
     let attempt = 0;
@@ -3064,12 +3040,10 @@ async function start() {
                 if (attempt === 1) {
                     console.log('ℹ️  The handler host is offline (HTTP 402 / DEPLOYMENT_DISABLED). Set SOURCE_URL to a working handler host, or start the bot once while it is up so it can be cached.');
                 }
-                if (await startV2Fallback('V1 handler source unavailable: ' + (err?.message || err))) return;
                 await new Promise(resolve => setTimeout(resolve, 15000));
                 continue;
             }
         }
-
 
         try {
             stopKeepAlive();
@@ -3089,10 +3063,8 @@ async function start() {
             keepAliveState = 'handler failed to run: ' + (err?.message || err);
             console.log('Handler failed to run:', err?.message || err);
             startKeepAlive();
-            if (await startV2Fallback('V1 handler failed to run: ' + (err?.message || err))) return;
             await new Promise(resolve => setTimeout(resolve, 15000));
         }
-
     }
 }
 

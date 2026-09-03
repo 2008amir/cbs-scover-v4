@@ -2,7 +2,7 @@ import baileys from '@whiskeysockets/baileys'
 
 /* The V1 process owns the live socket; use its Baileys instance when present
    so the encoder patch applies to the connection that actually sends. */
-const proto = global.baileysProto || baileys.proto
+const getProto = () => global.baileysProto || baileys.proto
 
 /* ------------------------------------------------------------------
    The Baileys build this server runs (eliteprotech-baileys) does not
@@ -16,8 +16,8 @@ const proto = global.baileysProto || baileys.proto
 
 const supportsRichResponse = () => {
     try {
-        return typeof proto?.Message?.fromObject === 'function' &&
-            'botForwardedMessage' in (proto.Message.prototype || {})
+        return typeof getProto()?.Message?.fromObject === 'function' &&
+            'botForwardedMessage' in (getProto().Message.prototype || {})
     } catch {
         return false
     }
@@ -91,7 +91,7 @@ function encodeBotForwarded(options) {
 
 /* Append the hand-encoded bytes whenever a message carries our marker. */
 function patchEncoder() {
-    const Message = proto?.Message
+    const Message = getProto()?.Message
     if (!Message || Message.__richHtmlPatched) return
     const original = Message.encode.bind(Message)
     Message.encode = function (message, writer) {

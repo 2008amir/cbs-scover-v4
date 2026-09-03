@@ -1008,7 +1008,7 @@ EliteProTech.ev.on("connection.update", async (s) => {
 
                 const botJid = EliteProTech.decodeJid(EliteProTech.user.id)
                 await EliteProTech.sendMessage(botJid, {
-                    text: `*✅ ELITE-PRO-V1 is now connected and online!* Bot Prefix: ${global.prefix || '.'} | Mode: ${modeData.mode}\n\n*Join us:* https://t.me/eliteprotechs`
+                    text: `*✅ CBS-SCOVER is now connected and online!* Bot Prefix: ${global.prefix || '.'} | Mode: ${modeData.mode}\n\n*Join us:* https://t.me/cbsscover`
                 })
             }
         }

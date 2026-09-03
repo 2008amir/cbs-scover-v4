@@ -4,7 +4,7 @@ const PREVIEW_HEIGHT = 588
 
 function fitHtmlToChatViewport(input) {
     const viewport = '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">'
-    const sizing = `<style id="elite-chat-preview">:root{width:100%;height:100%;overflow:hidden}*{box-sizing:border-box;max-width:100%}html,body{margin:0;width:100%;height:${PREVIEW_HEIGHT}px;max-height:100dvh;overflow:hidden}body{position:relative}body>*{max-height:100%;overflow:auto}img,video,canvas,svg,iframe{max-width:100%;max-height:100%;object-fit:contain}</style>`
+    const sizing = `<style id="elite-chat-preview">:root{width:100%!important;height:100%!important;overflow:hidden!important}*{box-sizing:border-box;max-width:100%!important}html,body{margin:0!important;width:100%!important;height:${PREVIEW_HEIGHT}px!important;max-height:100dvh!important;overflow:hidden!important}body{position:relative}body>*{min-height:0!important;max-height:100%!important;overflow:auto!important}img,video,canvas,svg,iframe{max-width:100%!important;max-height:100%!important;object-fit:contain}</style>`
 
     if (/<html[\s>]/i.test(input)) {
         if (/<head[\s>]/i.test(input)) return input.replace(/<head([^>]*)>/i, `<head$1>${viewport}${sizing}`)

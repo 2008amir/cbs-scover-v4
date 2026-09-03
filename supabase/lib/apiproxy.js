@@ -198,16 +198,34 @@ async function forward(req, res, target) {
     }
 }
 
+function audioPayload(audio) {
+    const title = audio.title || 'ElitePro Music';
+    const url = audio.downloadURL;
+    const filename = `${String(title).replace(/[\\/:*?"<>|]/g, '')}.mp3`;
+    // Superset of every response shape the command handler reads.
+    return {
+        success: true,
+        status: true,
+        title,
+        downloadURL: url,
+        url,
+        result: { url, downloadUrl: url, download_url: url, title, filename },
+        download: { downloadUrl: url, url, title, filename }
+    };
+}
+
 async function handle(req, res) {
     const parsed = new URL(req.url, 'http://127.0.0.1');
     const route = parsed.pathname.replace(/\/+$/, '') || '/';
-    const url = parsed.searchParams.get('url') || '';
+    const url = parsed.searchParams.get('url') || parsed.searchParams.get('q') || '';
+
+    const AUDIO_ROUTES = ['/convert', '/ytaudio', '/ytmp3', '/download/ytmp3', '/youtube/mp3', '/song', '/play'];
 
     try {
-        if ((route === '/convert' || route === '/ytaudio') && url) {
+        if (AUDIO_ROUTES.includes(route) && url) {
             const audio = await resolveYtAudio(url);
-            if (!audio) return json(res, 502, { success: false, error: 'no audio provider available' });
-            return json(res, 200, audio);
+            if (!audio) return json(res, 200, { success: false, status: false, error: 'no audio provider available' });
+            return json(res, 200, audioPayload(audio));
         }
 
         if (route === '/shazam' && url) {

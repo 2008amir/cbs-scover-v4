@@ -2648,8 +2648,12 @@ function withVersionedMenu(caption) {
 
     if (!/CBS-SCOVER-V2/.test(text)) {
         const [body, credits] = splitCredits(text);
-        const section = menuSection(caption, 'V2 COMMANDS', v2Commands.MENU_COMMANDS);
-        text = `${body.replace(/\s+$/, '')}\n\n${V2_BANNER}\n\n${section}`;
+        const groups = v2Commands.MENU_GROUPS;
+        const sections = Object.keys(groups)
+            .map(name => menuSection(caption, String(name).toUpperCase(), groups[name]))
+            .filter(Boolean)
+            .join('\n\n');
+        text = `${body.replace(/\s+$/, '')}\n\n${V2_BANNER}\n\n${sections}`;
         if (credits) text = `${text}\n\n${credits}`;
     }
 

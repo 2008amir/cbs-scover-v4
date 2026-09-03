@@ -1,4 +1,6 @@
-import { proto } from '@whiskeysockets/baileys'
+import baileys from '@whiskeysockets/baileys'
+
+const { proto } = baileys
 
 /* ------------------------------------------------------------------
    The Baileys build this server runs (eliteprotech-baileys) does not

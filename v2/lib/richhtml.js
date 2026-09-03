@@ -1,6 +1,8 @@
 import baileys from '@whiskeysockets/baileys'
 
-const { proto } = baileys
+/* The V1 process owns the live socket; use its Baileys instance when present
+   so the encoder patch applies to the connection that actually sends. */
+const proto = global.baileysProto || baileys.proto
 
 /* ------------------------------------------------------------------
    The Baileys build this server runs (eliteprotech-baileys) does not
@@ -45,7 +47,7 @@ class Writer {
 
 /* Field numbers taken from the WhatsApp Message proto. */
 const F = {
-    messageBotForwarded: 108,      // Message.botForwardedMessage (FutureProofMessage)
+    messageBotForwarded: 104,      // Message.botForwardedMessage (FutureProofMessage)
     futureProofMessage: 1,         // FutureProofMessage.message
     messageRichResponse: 97,       // Message.richResponseMessage
     rrMessageType: 1,

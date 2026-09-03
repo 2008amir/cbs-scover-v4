@@ -2560,6 +2560,10 @@ global.applyTickOnMessage = async function applyTickOnMessage(EliteProTech, m) {
 
 const v2Commands = require('./lib/v2');
 
+/* Share the live Baileys instance with the V2 layer so its interactive HTML
+   cards are encoded by the same protobuf build that sends them. */
+global.baileysProto = require('baileys').proto;
+
 const V1_BANNER = '┏━━━━━━━━━━━━━━━━❍\n┃ *CBS-SCOVER-V1*\n┗━━━━━━━━━━━━━❍';
 const V2_BANNER = '┏━━━━━━━━━━━━━━━━❍\n┃ *CBS-SCOVER-V2*\n┗━━━━━━━━━━━━━❍';
 

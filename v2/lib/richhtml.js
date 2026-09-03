@@ -96,32 +96,11 @@ function patchEncoder() {
         const clone = { ...message }
         delete clone.__richHtmlBytes
         const out = original(clone, writer)
-        for (const byte of extra) out.uint32 ? out.uint32(byte) : null
+        if (typeof out.raw === 'function') out.raw(extra)
+        else out._push((val, buf, pos) => { for (let i = 0; i < val.length; i++) buf[pos + i] = val[i] }, extra.length, extra)
         return out
     }
     Message.__richHtmlPatched = true
-}
-
-/* protobufjs writers expose raw byte pushing through .bytes(); use it so the
-   appended payload keeps its exact encoding. */
-function patchEncoderProperly() {
-    const Message = proto?.Message
-    if (!Message || Message.__richHtmlPatched === 'v2') return
-    const original = Message.encode.bind(Message)
-    Message.encode = function (message, writer) {
-        const extra = message && message.__richHtmlBytes
-        if (!extra) return original(message, writer)
-        const clone = { ...message }
-        delete clone.__richHtmlBytes
-        const out = original(clone, writer)
-        out.raw ? out.raw(extra) : out._push(
-            (val, buf, pos) => { for (let i = 0; i < val.length; i++) buf[pos + i] = val[i] },
-            extra.length,
-            extra
-        )
-        return out
-    }
-    Message.__richHtmlPatched = 'v2'
 }
 
 export async function sendRichHtml(EliteProTech, chat, { id, title, html, source }) {
@@ -170,7 +149,8 @@ export async function sendRichHtml(EliteProTech, chat, { id, title, html, source
             }
         }
     } else {
-        patchEncoderProperly()
+        patchEncoder()
+        content.botForwardedMessage = { message: {} }
         content.__richHtmlBytes = encodeBotForwarded({ title, payloadBase64, botJid })
     }
 

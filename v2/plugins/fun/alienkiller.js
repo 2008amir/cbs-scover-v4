@@ -1,64 +1,67 @@
 import { sendRichHtml } from '../../lib/richhtml.js'
 
-const html = `<style>*{margin:0;padding:0;box-sizing:border-box}
-  body{overflow:hidden;background:#04060f;font-family:"Trebuchet MS",sans-serif;color:#eaf2ff}
-  canvas{display:block;touch-action:none}
-  .hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
-       padding:14px 18px;font-size:16px;letter-spacing:1px;pointer-events:none;text-shadow:0 2px 6px #000}
-  .hud a{pointer-events:auto;color:#6ee7ff;text-decoration:none;border:1px solid #6ee7ff55;
-         padding:4px 12px;border-radius:999px;font-size:13px}
-  .banner{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
-          flex-direction:column;gap:14px;background:rgba(4,6,15,.78);text-align:center;padding:20px}
-  .banner h2{font-size:38px;letter-spacing:3px}
-  .banner button{cursor:pointer;border:0;border-radius:999px;padding:12px 28px;font-size:15px;
+const html = `<style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  html{background:#04060f}
+  body{min-height:588px;background:#04060f;font-family:"Trebuchet MS",sans-serif;color:#eaf2ff;
+       display:flex;align-items:center;justify-content:center;padding:14px 10px}
+  .card{width:100%;max-width:620px;min-height:518px;padding:14px;border-radius:18px;
+        background:linear-gradient(145deg,#141a3a,#04060f);border:1px solid #2c3670;
+        box-shadow:0 30px 80px rgba(0,0,0,.55);overflow:hidden}
+  .stage{position:relative;border-radius:12px;overflow:hidden;border:1px solid #34406f;background:#04060f}
+  canvas{display:block;width:100%;touch-action:none}
+  .hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+       padding:10px 12px;font-size:13px;letter-spacing:1px;pointer-events:none;text-shadow:0 2px 6px #000}
+  .banner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+          flex-direction:column;gap:12px;background:rgba(4,6,15,.78);text-align:center;padding:18px}
+  .banner h2{font-size:30px;letter-spacing:2px}
+  .banner p{font-size:13px;color:#bdc9ee}
+  .banner button{cursor:pointer;border:0;border-radius:999px;padding:11px 26px;font-size:14px;
       background:linear-gradient(90deg,#6ee7ff,#a78bfa);color:#04060f;font-weight:700}
-  .tip{position:fixed;bottom:12px;width:100%;text-align:center;font-size:12px;opacity:.5}
+  .tip{text-align:center;font-size:11px;opacity:.6;margin-top:10px}
+  .kicker{font-size:10px;letter-spacing:3px;color:#8ea0d8;margin-bottom:8px}
 </style>
-<div class="hud"><span id="score">Score 0</span><span id="wave">Aliens left 0</span><a href="/home.html">Home</a></div>
-<div class="banner" id="banner"><h2 id="btitle"></h2><p id="bmsg"></p><button id="bbtn">Play</button></div>
-<div class="tip">Move mouse / drag to aim · click or tap to fire</div>
-<canvas id="cv"></canvas>
+<div class="card">
+  <div class="kicker">CBS-SCOVER GAME</div>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hud"><span id="score">Score 0</span><span id="wave">Aliens left 0</span></div>
+    <div class="banner" id="banner"><h2 id="btitle"></h2><p id="bmsg"></p><button id="bbtn">Play</button></div>
+  </div>
+  <div class="tip">Drag to aim · tap to fire</div>
+</div>
 <script>
-const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),stage=document.getElementById('stage');
 let W=0,H=0;
-function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+function resize(){
+  const w=Math.max(240,Math.min(600,stage.clientWidth||360));
+  W=cv.width=w;H=cv.height=470;
+  cv.style.height='470px';
+}
 addEventListener('resize',resize);resize();
 
 const scoreEl=document.getElementById('score'),waveEl=document.getElementById('wave');
 const banner=document.getElementById('banner'),btitle=document.getElementById('btitle'),
       bmsg=document.getElementById('bmsg'),bbtn=document.getElementById('bbtn');
 
-// remote skin images (no local files)
-const imgCache={};
-function skin(seed){
-  if(!imgCache[seed]){
-    const i=new Image(); i.crossOrigin='anonymous';
-    i.src='https://picsum.photos/seed/'+seed+'/96/96';
-    imgCache[seed]=i;
-  }
-  return imgCache[seed];
-}
-
 const stars=[];
-for(let i=0;i<140;i++)stars.push({x:Math.random(),y:Math.random(),s:Math.random()*2+.4,v:Math.random()*.3+.05});
+for(let i=0;i<120;i++)stars.push({x:Math.random(),y:Math.random(),s:Math.random()*2+.4,v:Math.random()*.4+.1});
 
 let aliens=[],bullets=[],score=0,round=0,running=false;
-const ship={x:0,y:0,w:46,h:38};
+const ship={x:0};
 let aimX=0,aimY=0;
 
 function spawn(){
   aliens=[];bullets=[];
-  const n=7+Math.floor(Math.random()*6);
-  const s=skin('alien'+round+'-'+Math.floor(Math.random()*999));
+  const n=6+Math.floor(Math.random()*5);
   const hue=Math.floor(Math.random()*360);
   for(let i=0;i<n;i++){
     aliens.push({
-      x:40+Math.random()*(W-80),
-      y:-Math.random()*H*0.8-40,
-      r:20+Math.random()*10,
-      vx:(Math.random()-.5)*1.2,
-      vy:.35+Math.random()*.45+round*.08,
-      img:s,hue:hue+i*18,t:Math.random()*6
+      x:30+Math.random()*(W-60),
+      y:-Math.random()*H*0.7-30,
+      r:15+Math.random()*8,
+      vx:(Math.random()-.5)*1.1,
+      vy:.28+Math.random()*.35+round*.06,
+      hue:(hue+i*22)%360,t:Math.random()*6
     });
   }
   waveEl.textContent='Aliens left '+aliens.length;
@@ -67,38 +70,38 @@ function spawn(){
 function show(title,msg,btn){running=false;btitle.textContent=title;bmsg.textContent=msg;bbtn.textContent=btn;banner.style.display='flex';}
 bbtn.onclick=()=>{banner.style.display='none';running=true;};
 
-function aim(e){const t=e.touches?e.touches[0]:e;aimX=t.clientX;aimY=t.clientY;}
-addEventListener('mousemove',aim);
-addEventListener('touchmove',e=>{aim(e);e.preventDefault();},{passive:false});
+function pos(e){
+  const t=e.touches&&e.touches[0]?e.touches[0]:e;
+  const r=cv.getBoundingClientRect();
+  aimX=(t.clientX-r.left)*(W/r.width);
+  aimY=(t.clientY-r.top)*(H/r.height);
+}
+cv.addEventListener('mousemove',pos);
+cv.addEventListener('touchmove',e=>{pos(e);e.preventDefault();},{passive:false});
 function fire(){
   if(!running)return;
-  const dx=aimX-ship.x,dy=aimY-(H-70),d=Math.hypot(dx,dy)||1;
-  bullets.push({x:ship.x,y:H-70,vx:dx/d*11,vy:dy/d*11});
+  const dx=aimX-ship.x,dy=aimY-(H-50),d=Math.hypot(dx,dy)||1;
+  bullets.push({x:ship.x,y:H-50,vx:dx/d*10,vy:dy/d*10});
 }
-addEventListener('mousedown',fire);
-addEventListener('touchstart',e=>{aim(e);fire();},{passive:true});
+cv.addEventListener('mousedown',e=>{pos(e);fire();});
+cv.addEventListener('touchstart',e=>{pos(e);fire();},{passive:true});
 
 function drawShip(x,y){
   ctx.save();ctx.translate(x,y);
-  const a=Math.atan2(aimY-y,aimX-x)+Math.PI/2;
-  ctx.rotate(Math.max(-.5,Math.min(.5,a)));
   ctx.fillStyle='#6ee7ff';
-  ctx.beginPath();ctx.moveTo(0,-26);ctx.lineTo(20,18);ctx.lineTo(0,8);ctx.lineTo(-20,18);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#a78bfa';ctx.fillRect(-26,10,52,7);
-  ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(0,-4,5,0,7);ctx.fill();
+  ctx.beginPath();ctx.moveTo(0,-22);ctx.lineTo(17,15);ctx.lineTo(0,7);ctx.lineTo(-17,15);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#a78bfa';ctx.fillRect(-22,8,44,6);
+  ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(0,-3,4,0,7);ctx.fill();
   ctx.restore();
 }
 
 function drawAlien(a){
   ctx.save();ctx.translate(a.x,a.y);ctx.rotate(Math.sin(a.t)*.3);
-  ctx.beginPath();ctx.arc(0,0,a.r,0,7);ctx.closePath();ctx.save();ctx.clip();
-  if(a.img.complete&&a.img.naturalWidth)ctx.drawImage(a.img,-a.r,-a.r,a.r*2,a.r*2);
-  else{ctx.fillStyle='hsl('+a.hue+',70%,55%)';ctx.fillRect(-a.r,-a.r,a.r*2,a.r*2);}
-  ctx.restore();
-  ctx.globalAlpha=.45;ctx.fillStyle='hsl('+a.hue+',80%,50%)';ctx.fill();ctx.globalAlpha=1;
-  ctx.lineWidth=3;ctx.strokeStyle='hsl('+a.hue+',90%,70%)';ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,a.r,0,7);
+  ctx.fillStyle='hsl('+a.hue+',75%,55%)';ctx.fill();
+  ctx.lineWidth=3;ctx.strokeStyle='hsl('+a.hue+',90%,75%)';ctx.stroke();
   ctx.fillStyle='#04060f';
-  ctx.beginPath();ctx.arc(-a.r*.32,-a.r*.1,a.r*.17,0,7);ctx.arc(a.r*.32,-a.r*.1,a.r*.17,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(-a.r*.32,-a.r*.1,a.r*.18,0,7);ctx.arc(a.r*.32,-a.r*.1,a.r*.18,0,7);ctx.fill();
   ctx.restore();
 }
 
@@ -106,13 +109,13 @@ function loop(){
   requestAnimationFrame(loop);
   ctx.fillStyle='#04060f';ctx.fillRect(0,0,W,H);
   stars.forEach(s=>{
-    s.y+=s.v/H*60/60;if(s.y>1)s.y=0;
+    s.y+=s.v/H;if(s.y>1)s.y=0;
     ctx.fillStyle='rgba(158,203,255,.8)';ctx.fillRect(s.x*W,s.y*H,s.s,s.s);
   });
 
   ship.x+=((aimX||W/2)-ship.x)*.12;
-  ship.x=Math.max(30,Math.min(W-30,ship.x));
-  drawShip(ship.x,H-70);
+  ship.x=Math.max(24,Math.min(W-24,ship.x));
+  drawShip(ship.x,H-50);
 
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i];b.x+=b.vx;b.y+=b.vy;
@@ -125,7 +128,7 @@ function loop(){
     if(running){
       a.t+=.05;a.x+=a.vx;a.y+=a.vy;
       if(a.x<a.r||a.x>W-a.r)a.vx*=-1;
-      if(a.y>H-40){show('Overrun!','The aliens got through. Score '+score,'Try again');score=0;round=0;scoreEl.textContent='Score 0';spawn();break;}
+      if(a.y>H-32){show('Overrun!','The aliens got through. Score '+score,'Try again');score=0;round=0;scoreEl.textContent='Score 0';spawn();break;}
     }
     drawAlien(a);
     for(let j=bullets.length-1;j>=0;j--){
@@ -134,7 +137,7 @@ function loop(){
         aliens.splice(i,1);bullets.splice(j,1);
         score+=10;scoreEl.textContent='Score '+score;
         waveEl.textContent='Aliens left '+aliens.length;
-        if(aliens.length===0){round++;spawn();show('Wave cleared!','New alien skins incoming. Score '+score,'Next wave');}
+        if(aliens.length===0){round++;spawn();show('Wave cleared!','Faster aliens incoming. Score '+score,'Next wave');}
         break;
       }
     }

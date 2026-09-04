@@ -76,9 +76,11 @@ const html = `<style>
   let stateTimer = 0, mouth = 0, frightenedTimer = 0, tick = 0, spawnGrace = 0;
 
   function resize() {
-    const hudH = 90;
-    const s = Math.max(10, Math.floor(Math.min(innerWidth / COLS, (innerHeight - hudH) / ROWS)));
+    const availW = Math.max(240, Math.min(600, (document.body.clientWidth || 380) - 20));
+    const s = Math.max(12, Math.min(20, Math.floor(availW / COLS)));
     canvas.width = COLS * s; canvas.height = ROWS * s;
+    canvas.style.width = (COLS * s) + 'px';
+    canvas.style.height = (ROWS * s) + 'px';
     canvas.dataset.cell = s;
   }
   addEventListener("resize", resize); resize();

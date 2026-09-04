@@ -149,6 +149,6 @@ let handler = async (m, { EliteProTech }) => {
     }
 }
 
-handler.command = ['tictactoe', 'ttt']
+handler.command = ['tictacto', 'tttfun']
 
 export default handler

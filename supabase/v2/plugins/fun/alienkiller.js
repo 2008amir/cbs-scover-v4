@@ -1,43 +1,148 @@
 import { sendRichHtml } from '../../lib/richhtml.js'
 
-const html = `<style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}body{margin:0;background:#05060f;color:#fff;font-family:Arial}.card{max-width:620px;margin:auto;padding:22px;border-radius:22px;background:radial-gradient(circle at top right,#1f3a5e,#101324 62%,#05060f);border:1px solid #4f7fb5;box-shadow:0 14px 38px #0009;min-height:518px}.head{display:flex;justify-content:space-between;align-items:center}.small{font-size:10px;letter-spacing:2px;color:#a9c6dd}h2{margin:4px 0 0;font-size:24px}b{color:#69f0b4}canvas{margin-top:14px;width:100%;border-radius:14px;background:#03040a;border:1px solid #2f5687;touch-action:none}.pad{display:flex;gap:10px;justify-content:center;margin-top:14px}.pad button{flex:1;max-width:150px;height:48px;border:0;border-radius:13px;background:#ffffff18;color:#fff;font-size:16px;font-weight:bold}.pad button:active{background:#2ea4ff}.hint{text-align:center;color:#a9c6dd;font-size:12px;margin-top:10px}</style><div class="card"><div class="head"><div><div class="small">ELITE-PRO-V2 GAME</div><h2>Alien Killer</h2></div><b id="score">0</b></div><canvas id="g" width="672" height="518"></canvas><div class="pad"><button data-a="l">◀</button><button data-a="f">FIRE</button><button data-a="r">▶</button></div><div class="hint">Drag on the screen to move · FIRE or Space to shoot</div></div><script>
-const c=document.getElementById('g'),x=c.getContext('2d'),sc=document.getElementById('score');
-let ship,aliens,bullets,bombs,score,lives,over,win,dirx=0,dir=1,speed=0.5,last=0,cool=0;
-function reset(){ship={x:c.width/2-24,w:48,h:20};aliens=[];bullets=[];bombs=[];score=0;lives=3;over=false;win=false;dir=1;speed=.5;
- for(let r=0;r<4;r++)for(let i=0;i<9;i++)aliens.push({x:60+i*62,y:50+r*54,w:38,h:26,a:true});sc.textContent='0'}
-function fire(){if(over||win||cool>0)return;bullets.push({x:ship.x+ship.w/2-2,y:c.height-46});cool=14}
-function step(dt){if(over||win)return;cool-=dt;
- ship.x=Math.max(4,Math.min(c.width-ship.w-4,ship.x+dirx*7*dt));
- bullets.forEach(b=>b.y-=9*dt);bullets=bullets.filter(b=>b.y>-12);
- bombs.forEach(b=>b.y+=5*dt);bombs=bombs.filter(b=>b.y<c.height+12);
- let live=aliens.filter(a=>a.a),edge=false;
- live.forEach(a=>{a.x+=dir*speed*dt*2;if(a.x<6||a.x+a.w>c.width-6)edge=true});
- if(edge){dir*=-1;live.forEach(a=>a.y+=16)}
- if(Math.random()<0.02*dt&&live.length){const a=live[Math.floor(Math.random()*live.length)];bombs.push({x:a.x+a.w/2-2,y:a.y+a.h})}
- for(const b of bullets)for(const a of live)if(b.x>a.x&&b.x<a.x+a.w&&b.y>a.y&&b.y<a.y+a.h){a.a=false;b.y=-99;score+=25;sc.textContent=score}
- for(const b of bombs)if(b.x>ship.x&&b.x<ship.x+ship.w&&b.y>c.height-40){b.y=9999;lives--;if(lives<=0)over=true}
- live=aliens.filter(a=>a.a);
- if(!live.length)win=true;
- if(live.some(a=>a.y+a.h>c.height-42))over=true;
- speed=.5+(36-live.length)*0.05}
-function draw(){x.clearRect(0,0,c.width,c.height);
- x.fillStyle='#1b2c4a';for(let i=0;i<40;i++)x.fillRect((i*97)%c.width,(i*61)%c.height,2,2);
- x.fillStyle='#69f0b4';x.fillRect(ship.x,c.height-40,ship.w,ship.h);x.fillRect(ship.x+ship.w/2-4,c.height-50,8,10);
- x.fillStyle='#ff7bd1';aliens.forEach(a=>{if(!a.a)return;x.fillRect(a.x,a.y,a.w,a.h);x.fillStyle='#03040a';x.fillRect(a.x+8,a.y+8,6,6);x.fillRect(a.x+a.w-14,a.y+8,6,6);x.fillStyle='#ff7bd1'});
- x.fillStyle='#fff';bullets.forEach(b=>x.fillRect(b.x,b.y,4,12));
- x.fillStyle='#ffd85e';bombs.forEach(b=>x.fillRect(b.x,b.y,4,12));
- x.font='14px Arial';x.fillStyle='#a9c6dd';x.fillText('LIVES '+Math.max(0,lives),12,20);
- if(over||win){x.fillStyle='#000c';x.fillRect(0,c.height/2-60,c.width,120);x.fillStyle='#fff';x.textAlign='center';x.font='bold 34px Arial';x.fillText(win?'EARTH IS SAFE!':'GAME OVER',c.width/2,c.height/2);x.font='16px Arial';x.fillText('Tap to play again',c.width/2,c.height/2+30);x.textAlign='left'}}
-function loop(t){const dt=Math.min((t-last||16)/16,3);last=t;step(dt);draw();requestAnimationFrame(loop)}
-document.querySelectorAll('[data-a]').forEach(b=>{const a=b.dataset.a;
- const on=e=>{e.preventDefault();if(a==='f')fire();else dirx=a==='l'?-1:1};
- const off=()=>{if(a!=='f')dirx=0};
- b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off)});
-c.addEventListener('pointerdown',e=>{if(over||win)return reset();const r=c.getBoundingClientRect();ship.x=(e.clientX-r.left)/r.width*c.width-ship.w/2;fire()});
-c.addEventListener('pointermove',e=>{if(!e.buttons)return;const r=c.getBoundingClientRect();ship.x=(e.clientX-r.left)/r.width*c.width-ship.w/2});
-document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')dirx=-1;if(e.key==='ArrowRight')dirx=1;if(e.key===' '){e.preventDefault();fire()}});
-document.addEventListener('keyup',()=>dirx=0);
-reset();requestAnimationFrame(loop)
+const html = `<style>*{margin:0;padding:0;box-sizing:border-box}
+  body{overflow:hidden;background:#04060f;font-family:"Trebuchet MS",sans-serif;color:#eaf2ff}
+  canvas{display:block;touch-action:none}
+  .hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
+       padding:14px 18px;font-size:16px;letter-spacing:1px;pointer-events:none;text-shadow:0 2px 6px #000}
+  .hud a{pointer-events:auto;color:#6ee7ff;text-decoration:none;border:1px solid #6ee7ff55;
+         padding:4px 12px;border-radius:999px;font-size:13px}
+  .banner{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+          flex-direction:column;gap:14px;background:rgba(4,6,15,.78);text-align:center;padding:20px}
+  .banner h2{font-size:38px;letter-spacing:3px}
+  .banner button{cursor:pointer;border:0;border-radius:999px;padding:12px 28px;font-size:15px;
+      background:linear-gradient(90deg,#6ee7ff,#a78bfa);color:#04060f;font-weight:700}
+  .tip{position:fixed;bottom:12px;width:100%;text-align:center;font-size:12px;opacity:.5}
+</style>
+<div class="hud"><span id="score">Score 0</span><span id="wave">Aliens left 0</span><a href="/home.html">Home</a></div>
+<div class="banner" id="banner"><h2 id="btitle"></h2><p id="bmsg"></p><button id="bbtn">Play</button></div>
+<div class="tip">Move mouse / drag to aim · click or tap to fire</div>
+<canvas id="cv"></canvas>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let W=0,H=0;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+addEventListener('resize',resize);resize();
+
+const scoreEl=document.getElementById('score'),waveEl=document.getElementById('wave');
+const banner=document.getElementById('banner'),btitle=document.getElementById('btitle'),
+      bmsg=document.getElementById('bmsg'),bbtn=document.getElementById('bbtn');
+
+// remote skin images (no local files)
+const imgCache={};
+function skin(seed){
+  if(!imgCache[seed]){
+    const i=new Image(); i.crossOrigin='anonymous';
+    i.src='https://picsum.photos/seed/'+seed+'/96/96';
+    imgCache[seed]=i;
+  }
+  return imgCache[seed];
+}
+
+const stars=[];
+for(let i=0;i<140;i++)stars.push({x:Math.random(),y:Math.random(),s:Math.random()*2+.4,v:Math.random()*.3+.05});
+
+let aliens=[],bullets=[],score=0,round=0,running=false;
+const ship={x:0,y:0,w:46,h:38};
+let aimX=0,aimY=0;
+
+function spawn(){
+  aliens=[];bullets=[];
+  const n=7+Math.floor(Math.random()*6);
+  const s=skin('alien'+round+'-'+Math.floor(Math.random()*999));
+  const hue=Math.floor(Math.random()*360);
+  for(let i=0;i<n;i++){
+    aliens.push({
+      x:40+Math.random()*(W-80),
+      y:-Math.random()*H*0.8-40,
+      r:20+Math.random()*10,
+      vx:(Math.random()-.5)*1.2,
+      vy:.35+Math.random()*.45+round*.08,
+      img:s,hue:hue+i*18,t:Math.random()*6
+    });
+  }
+  waveEl.textContent='Aliens left '+aliens.length;
+}
+
+function show(title,msg,btn){running=false;btitle.textContent=title;bmsg.textContent=msg;bbtn.textContent=btn;banner.style.display='flex';}
+bbtn.onclick=()=>{banner.style.display='none';running=true;};
+
+function aim(e){const t=e.touches?e.touches[0]:e;aimX=t.clientX;aimY=t.clientY;}
+addEventListener('mousemove',aim);
+addEventListener('touchmove',e=>{aim(e);e.preventDefault();},{passive:false});
+function fire(){
+  if(!running)return;
+  const dx=aimX-ship.x,dy=aimY-(H-70),d=Math.hypot(dx,dy)||1;
+  bullets.push({x:ship.x,y:H-70,vx:dx/d*11,vy:dy/d*11});
+}
+addEventListener('mousedown',fire);
+addEventListener('touchstart',e=>{aim(e);fire();},{passive:true});
+
+function drawShip(x,y){
+  ctx.save();ctx.translate(x,y);
+  const a=Math.atan2(aimY-y,aimX-x)+Math.PI/2;
+  ctx.rotate(Math.max(-.5,Math.min(.5,a)));
+  ctx.fillStyle='#6ee7ff';
+  ctx.beginPath();ctx.moveTo(0,-26);ctx.lineTo(20,18);ctx.lineTo(0,8);ctx.lineTo(-20,18);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#a78bfa';ctx.fillRect(-26,10,52,7);
+  ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(0,-4,5,0,7);ctx.fill();
+  ctx.restore();
+}
+
+function drawAlien(a){
+  ctx.save();ctx.translate(a.x,a.y);ctx.rotate(Math.sin(a.t)*.3);
+  ctx.beginPath();ctx.arc(0,0,a.r,0,7);ctx.closePath();ctx.save();ctx.clip();
+  if(a.img.complete&&a.img.naturalWidth)ctx.drawImage(a.img,-a.r,-a.r,a.r*2,a.r*2);
+  else{ctx.fillStyle='hsl('+a.hue+',70%,55%)';ctx.fillRect(-a.r,-a.r,a.r*2,a.r*2);}
+  ctx.restore();
+  ctx.globalAlpha=.45;ctx.fillStyle='hsl('+a.hue+',80%,50%)';ctx.fill();ctx.globalAlpha=1;
+  ctx.lineWidth=3;ctx.strokeStyle='hsl('+a.hue+',90%,70%)';ctx.stroke();
+  ctx.fillStyle='#04060f';
+  ctx.beginPath();ctx.arc(-a.r*.32,-a.r*.1,a.r*.17,0,7);ctx.arc(a.r*.32,-a.r*.1,a.r*.17,0,7);ctx.fill();
+  ctx.restore();
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  ctx.fillStyle='#04060f';ctx.fillRect(0,0,W,H);
+  stars.forEach(s=>{
+    s.y+=s.v/H*60/60;if(s.y>1)s.y=0;
+    ctx.fillStyle='rgba(158,203,255,.8)';ctx.fillRect(s.x*W,s.y*H,s.s,s.s);
+  });
+
+  ship.x+=((aimX||W/2)-ship.x)*.12;
+  ship.x=Math.max(30,Math.min(W-30,ship.x));
+  drawShip(ship.x,H-70);
+
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];b.x+=b.vx;b.y+=b.vy;
+    if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){bullets.splice(i,1);continue;}
+    ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(b.x,b.y,4,0,7);ctx.fill();
+  }
+
+  for(let i=aliens.length-1;i>=0;i--){
+    const a=aliens[i];
+    if(running){
+      a.t+=.05;a.x+=a.vx;a.y+=a.vy;
+      if(a.x<a.r||a.x>W-a.r)a.vx*=-1;
+      if(a.y>H-40){show('Overrun!','The aliens got through. Score '+score,'Try again');score=0;round=0;scoreEl.textContent='Score 0';spawn();break;}
+    }
+    drawAlien(a);
+    for(let j=bullets.length-1;j>=0;j--){
+      const b=bullets[j];
+      if(Math.hypot(a.x-b.x,a.y-b.y)<a.r+4){
+        aliens.splice(i,1);bullets.splice(j,1);
+        score+=10;scoreEl.textContent='Score '+score;
+        waveEl.textContent='Aliens left '+aliens.length;
+        if(aliens.length===0){round++;spawn();show('Wave cleared!','New alien skins incoming. Score '+score,'Next wave');}
+        break;
+      }
+    }
+  }
+}
+spawn();ship.x=W/2;aimX=W/2;aimY=H/2;
+show('Alien Killer','Shoot every alien before they reach the bottom.','Start');
+loop();
 </script>`
 
 let handler = async (m, { EliteProTech }) => {

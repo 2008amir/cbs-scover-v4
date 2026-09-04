@@ -2,9 +2,14 @@ import { sendRichHtml } from '../../lib/richhtml.js'
 
 const html = `<style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; background: #05060f; overflow: hidden;
+  html { background: #05060f; }
+  html, body { min-height: 588px; background: #05060f;
     font-family: 'Courier New', monospace; touch-action: none; }
-  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 16px 10px; min-height: 588px; }
+  #hud { font-size: 14px !important; }
+  #banner .big { font-size: 34px !important; }
+  #banner .small, #hint { font-size: 13px !important; }
   #hud { display: flex; gap: 28px; color: #fff; font-weight: bold;
     font-size: clamp(13px, 2.4vh, 20px); letter-spacing: 1px; text-transform: uppercase; }
   #hud span { color: #ffe600; }
@@ -71,9 +76,11 @@ const html = `<style>
   let stateTimer = 0, mouth = 0, frightenedTimer = 0, tick = 0, spawnGrace = 0;
 
   function resize() {
-    const hudH = 90;
-    const s = Math.max(10, Math.floor(Math.min(innerWidth / COLS, (innerHeight - hudH) / ROWS)));
+    const availW = Math.max(240, Math.min(600, (document.body.clientWidth || 380) - 20));
+    const s = Math.max(12, Math.min(20, Math.floor(availW / COLS)));
     canvas.width = COLS * s; canvas.height = ROWS * s;
+    canvas.style.width = (COLS * s) + 'px';
+    canvas.style.height = (ROWS * s) + 'px';
     canvas.dataset.cell = s;
   }
   addEventListener("resize", resize); resize();

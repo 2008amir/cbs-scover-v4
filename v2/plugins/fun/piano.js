@@ -9,21 +9,27 @@ const html = `
   -webkit-tap-highlight-color:transparent;
   user-select:none
 }
+  html {
+    background: radial-gradient(ellipse at top, #2a1f6e 0%, #110d2e 60%, #070513 100%) #110d2e;
+    min-height: 588px;
+  }
   body {
-    background: radial-gradient(ellipse at top, #2a1f6e 0%, #110d2e 60%, #070513 100%);
+    background: radial-gradient(ellipse at top, #2a1f6e 0%, #110d2e 60%, #070513 100%) #110d2e;
+    min-height: 588px;
+    margin: 0;
     color: #fff;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     display: flex; align-items: center; justify-content: center;
-    padding: 0px; overflow: hidden; touch-action: manipulation;
+    padding: 14px 10px; touch-action: manipulation;
   }
   .card {
-    width: 100%; max-width: 720px;
+    width: 100%; max-width: 620px; min-height: 518px;
     background: rgba(30, 23, 75, 0.92);
     border: 1px solid rgba(120, 110, 200, 0.25);
     border-radius: 28px;
     padding: 22px 18px 26px;
     box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
-    display: flex; flex-direction: column; gap: 14px;
+    display: flex; flex-direction: column; gap: 14px; justify-content: center;
   }
   header { text-align: left; }
   .kicker { font-size: 11px; letter-spacing: 4px; color: #a9a4d8; text-transform: uppercase; }

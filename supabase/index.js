@@ -2990,8 +2990,42 @@ function stopKeepAlive() {
     keepAlive = null;
 }
 
+
+// Keeps the process alive under hosting panels: never exit on an unexpected
+// error, and make sure something is always listening on $PORT.
+process.on('uncaughtException', (err) => {
+    console.log('⚠️ Uncaught exception (ignored):', err?.stack || err?.message || err);
+});
+process.on('unhandledRejection', (err) => {
+    console.log('⚠️ Unhandled rejection (ignored):', err?.message || err);
+});
+process.on('SIGTERM', () => console.log('ℹ️ SIGTERM received, staying online.'));
+process.on('SIGHUP', () => console.log('ℹ️ SIGHUP received, staying online.'));
+
+function portIsOpen(port) {
+    return new Promise((resolve) => {
+        const socket = require('net').connect({ port, host: '127.0.0.1' });
+        const done = (ok) => { try { socket.destroy(); } catch {} resolve(ok); };
+        socket.setTimeout(2000);
+        socket.on('connect', () => done(true));
+        socket.on('timeout', () => done(false));
+        socket.on('error', () => done(false));
+    });
+}
+
+// If the bot handler never bound $PORT, bring the keep-alive server back so the
+// panel does not treat the process as dead and shut it down.
+function watchPort() {
+    const port = Number(process.env.PORT || 3000);
+    setInterval(async () => {
+        if (keepAlive) return;
+        if (!(await portIsOpen(port))) startKeepAlive();
+    }, 20000);
+}
+
 async function start() {
     startKeepAlive();
+    watchPort();
     while (true) {
         let source = null;
         try {
@@ -3017,6 +3051,10 @@ async function start() {
             eval(code);
 
             keepAliveState = 'loaded';
+            setTimeout(async () => {
+                const port = Number(process.env.PORT || 3000);
+                if (!keepAlive && !(await portIsOpen(port))) startKeepAlive();
+            }, 8000);
             break;
         } catch (err) {
             keepAliveState = 'handler failed to run: ' + (err?.message || err);

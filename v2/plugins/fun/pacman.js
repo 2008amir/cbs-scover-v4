@@ -2,9 +2,14 @@ import { sendRichHtml } from '../../lib/richhtml.js'
 
 const html = `<style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; background: #05060f; overflow: hidden;
+  html { background: #05060f; }
+  html, body { min-height: 588px; background: #05060f;
     font-family: 'Courier New', monospace; touch-action: none; }
-  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 16px 10px; min-height: 588px; }
+  #hud { font-size: 14px !important; }
+  #banner .big { font-size: 34px !important; }
+  #banner .small, #hint { font-size: 13px !important; }
   #hud { display: flex; gap: 28px; color: #fff; font-weight: bold;
     font-size: clamp(13px, 2.4vh, 20px); letter-spacing: 1px; text-transform: uppercase; }
   #hud span { color: #ffe600; }

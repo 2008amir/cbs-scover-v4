@@ -2676,6 +2676,18 @@ global.sendMenu = async function sendMenu(EliteProTech, m, image, caption) {
 global.withVoiceChangerMenu = withVersionedMenu;
 global.withVersionedMenu = withVersionedMenu;
 
+global.scheduleReconnect = function scheduleReconnect(reconnectFn, delay = 5000) {
+    if (typeof reconnectFn !== 'function') return;
+    if (global.__v1ReconnectTimer) return;
+    global.__v1ReconnectTimer = setTimeout(() => {
+        global.__v1ReconnectTimer = null;
+        try {
+            reconnectFn();
+        } catch (e) {
+            console.log('Reconnect failed:', e?.message || e);
+        }
+    }, delay);
+};
 
 
 
@@ -2811,6 +2823,9 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
     } else {
         console.log('⚠️ Logout patch target not found.');
     }
+
+    // Avoid reconnect storms from recursive start calls after transient closes.
+    code = code.replace('        return startEliteProTech();', '        return global.scheduleReconnect(startEliteProTech, 7000);');
 
     /* ---- Login/pairing: ask for the number in the terminal ---- */
 

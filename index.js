@@ -2678,15 +2678,22 @@ global.withVersionedMenu = withVersionedMenu;
 
 global.scheduleReconnect = function scheduleReconnect(reconnectFn, delay = 5000) {
     if (typeof reconnectFn !== 'function') return;
+    const nextDelay = Number.isFinite(delay) && delay >= 0 ? delay : 5000;
     if (global.__v1ReconnectTimer) return;
     global.__v1ReconnectTimer = setTimeout(() => {
         global.__v1ReconnectTimer = null;
-        try {
-            reconnectFn();
-        } catch (e) {
-            console.log('Reconnect failed:', e?.message || e);
-        }
-    }, delay);
+        if (global.__v1ReconnectInFlight) return global.scheduleReconnect(reconnectFn, nextDelay);
+        global.__v1ReconnectInFlight = true;
+        Promise.resolve()
+            .then(() => reconnectFn())
+            .catch((e) => {
+                console.log('Reconnect failed:', e?.message || e);
+                global.scheduleReconnect(reconnectFn, 10000);
+            })
+            .finally(() => {
+                global.__v1ReconnectInFlight = false;
+            });
+    }, nextDelay);
 };
 
 

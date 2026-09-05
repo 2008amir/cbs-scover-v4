@@ -2825,7 +2825,10 @@ async function legacyRestoreMessage(EliteProTech, from, note, msg, quoted, menti
     }
 
     // Avoid reconnect storms from recursive start calls after transient closes.
-    code = code.replace('        return startEliteProTech();', '        return global.scheduleReconnect(startEliteProTech, 7000);');
+    // Patch every reconnect return form used inside the upstream source.
+    code = code
+        .replace(/return\s+startEliteProTech\(\);/g, 'return global.scheduleReconnect(startEliteProTech, 7000);')
+        .replace(/return\s+startEliteProTech\(\)/g, 'return global.scheduleReconnect(startEliteProTech, 7000)');
 
     /* ---- Login/pairing: ask for the number in the terminal ---- */
 

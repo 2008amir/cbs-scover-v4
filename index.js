@@ -3039,7 +3039,6 @@ async function start() {
 
 
         try {
-            stopKeepAlive();
             /* Record every command spelling V1 handles so the merged V2 layer
                can skip exact duplicates and keep only its own spellings. */
             try {
@@ -3066,4 +3065,3 @@ async function start() {
 }
 
 start();
-

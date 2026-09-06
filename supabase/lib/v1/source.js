@@ -62,10 +62,21 @@ http.createServer((req, res) => {
     });
 }).listen(PORT, "0.0.0.0", () => {});
 
-/* The message store is capped: an unbounded store made memory grow until the
-   hosting panel killed the process. */
-const STORE_MAX_MESSAGES_PER_CHAT = 150
-const STORE_MAX_CHATS = 80
+/* Messages are only kept while anti-delete is on, and only for as long as
+   recovery needs them: 2 days in private chats, 10 hours in groups. Long term
+   copies live on disk (anti_delete folder); memory keeps just a small window so
+   the process can never grow until the host kills it. */
+const STORE_MAX_MESSAGES_PER_CHAT = 60
+const STORE_MAX_CHATS = 40
+const STORE_TTL_PRIVATE = 2 * 24 * 60 * 60 * 1000
+const STORE_TTL_GROUP = 10 * 60 * 60 * 1000
+
+function antiDeleteIsOn() {
+    try {
+        if (typeof antiDeleteConfig === 'object' && antiDeleteConfig) return !!antiDeleteConfig.enabled
+    } catch {}
+    return false
+}
 
 const store = {
     messages: {},
@@ -75,27 +86,40 @@ const store = {
         return {}
     },
     trim: function () {
+        const now = Date.now()
+        for (const jid of Object.keys(this.messages)) {
+            const ttl = jid.endsWith('@g.us') ? STORE_TTL_GROUP : STORE_TTL_PRIVATE
+            const entries = this.messages[jid]
+            for (const id of Object.keys(entries)) {
+                const ts = entries[id]?._storedAt || 0
+                if (now - ts > ttl) delete entries[id]
+            }
+            const ids = Object.keys(entries)
+            if (ids.length > STORE_MAX_MESSAGES_PER_CHAT) {
+                for (const id of ids.slice(0, ids.length - STORE_MAX_MESSAGES_PER_CHAT)) delete entries[id]
+            }
+            if (!Object.keys(entries).length) delete this.messages[jid]
+        }
         const jids = Object.keys(this.messages)
         if (jids.length > STORE_MAX_CHATS) {
             for (const jid of jids.slice(0, jids.length - STORE_MAX_CHATS)) delete this.messages[jid]
         }
-        for (const jid of Object.keys(this.messages)) {
-            const ids = Object.keys(this.messages[jid])
-            if (ids.length > STORE_MAX_MESSAGES_PER_CHAT) {
-                for (const id of ids.slice(0, ids.length - STORE_MAX_MESSAGES_PER_CHAT)) delete this.messages[jid][id]
-            }
-        }
         const contactIds = Object.keys(this.contacts)
-        if (contactIds.length > 3000) {
-            for (const id of contactIds.slice(0, contactIds.length - 3000)) delete this.contacts[id]
+        if (contactIds.length > 2000) {
+            for (const id of contactIds.slice(0, contactIds.length - 2000)) delete this.contacts[id]
         }
     },
     bind: function(ev) {
         ev.on('messages.upsert', ({ messages }) => {
+            if (!antiDeleteIsOn()) {
+                this.messages = {}
+                return
+            }
             messages.forEach(msg => {
                 if (msg.key && msg.key.remoteJid) {
                     this.messages[msg.key.remoteJid] = this.messages[msg.key.remoteJid] || {}
                     this.messages[msg.key.remoteJid][msg.key.id] = msg
+                    try { msg._storedAt = Date.now() } catch {}
                 }
             })
             this.trim()
@@ -113,6 +137,7 @@ const store = {
             this.chats = chats
         })
     },
+
 
     loadMessage: async function (jid, id) {
     return this.messages[jid]?.[id] || null
@@ -822,25 +847,39 @@ async function getChatName(EliteProTech, jid, fallback = jid) {
 
 const handledDeletes = new Set()
 
+/* Retention for saved anti-delete messages:
+   - private chats: 2 days, so a message deleted a day later can still be recovered
+   - group chats: 10 hours only, to keep storage small */
+const ANTIDELETE_TTL_PRIVATE = 2 * 24 * 60 * 60 * 1000
+const ANTIDELETE_TTL_GROUP = 10 * 60 * 60 * 1000
+
+function antiDeleteTtlFor(fileName) {
+    return fileName.includes('@g.us') ? ANTIDELETE_TTL_GROUP : ANTIDELETE_TTL_PRIVATE
+}
+
 setInterval(() => {
     const now = Date.now()
 
     for (const key of [...handledDeletes]) {
         const [, ts] = key.split('|')
-        if (now - parseInt(ts) > 10 * 60 * 1000) handledDeletes.delete(key)
+        if (now - parseInt(ts) > 60 * 60 * 1000) handledDeletes.delete(key)
     }
 
     for (const file of fs.readdirSync(antiDeleteDir)) {
         try {
+            if (!file.endsWith('.json')) continue
             const filePath = path.join(antiDeleteDir, file)
-            const content = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+            const stat = fs.statSync(filePath)
+            let ts = stat.mtimeMs
+            try {
+                ts = JSON.parse(fs.readFileSync(filePath, 'utf8'))._ts || ts
+            } catch {}
 
-            if (now - (content._ts || 0) > 10 * 60 * 1000) {
-                fs.unlinkSync(filePath)
-            }
+            if (now - ts > antiDeleteTtlFor(file)) fs.unlinkSync(filePath)
         } catch {}
     }
-}, 60 * 1000)
+}, 5 * 60 * 1000)
+
 
 async function handleAntiDeleteCapture(EliteProTech, mek) {
     try {

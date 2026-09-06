@@ -3105,6 +3105,8 @@ function watchPort() {
 async function start() {
     startKeepAlive();
     watchPort();
+    memoryGuard();
+
     while (true) {
         let source = null;
         try {

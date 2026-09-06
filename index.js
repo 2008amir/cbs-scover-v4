@@ -3031,7 +3031,7 @@ process.on('SIGUSR1', () => {});
 process.on('SIGUSR2', () => {});
 process.on('beforeExit', () => console.log('ℹ️ Event loop drained, keeping the process running.'));
 
-// A永-running timer guarantees the event loop never empties, so the process can
+// A long-running timer guarantees the event loop never empties, so the process can
 // never quit on its own after a disconnect.
 setInterval(() => {}, 60000);
 

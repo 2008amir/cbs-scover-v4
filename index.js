@@ -3026,6 +3026,60 @@ process.on('unhandledRejection', (err) => {
 });
 process.on('SIGTERM', () => console.log('ℹ️ SIGTERM received, staying online.'));
 process.on('SIGHUP', () => console.log('ℹ️ SIGHUP received, staying online.'));
+process.on('SIGQUIT', () => console.log('ℹ️ SIGQUIT received, staying online.'));
+process.on('SIGUSR1', () => {});
+process.on('SIGUSR2', () => {});
+process.on('beforeExit', () => console.log('ℹ️ Event loop drained, keeping the process running.'));
+
+// A永-running timer guarantees the event loop never empties, so the process can
+// never quit on its own after a disconnect.
+setInterval(() => {}, 60000);
+
+/* Memory guard: hosting panels kill processes that keep growing. Trim the
+   in-memory caches and temp files well before the limit is reached. */
+function cleanTempDirs() {
+    const dirs = [
+        path.join(__dirname, 'database', 'temp'),
+        path.join(__dirname, 'lib', 'database', 'temp'),
+        path.join(__dirname, 'v2', 'lib', 'database', 'temp'),
+        require('os').tmpdir()
+    ];
+    const now = Date.now();
+    for (const dir of dirs) {
+        try {
+            for (const name of fs.readdirSync(dir)) {
+                const file = path.join(dir, name);
+                try {
+                    const stat = fs.statSync(file);
+                    if (!stat.isFile()) continue;
+                    if (!/\.(ogg|opus|mp3|mp4|wav|webp|jpg|jpeg|png|pcm|tmp|webm|m4a)$/i.test(name)) continue;
+                    if (now - stat.mtimeMs > 30 * 60 * 1000) fs.unlinkSync(file);
+                } catch {}
+            }
+        } catch {}
+    }
+}
+
+function memoryGuard() {
+    setInterval(() => {
+        try {
+            const rssMb = process.memoryUsage().rss / 1024 / 1024;
+            if (rssMb < 380) return;
+            console.log(`🧹 Memory at ${Math.round(rssMb)} MB, trimming caches.`);
+            try { global.store?.trim?.(); } catch {}
+            try {
+                if (global.store?.messages) {
+                    for (const jid of Object.keys(global.store.messages)) delete global.store.messages[jid];
+                }
+            } catch {}
+            try { global.userChats = {}; global.userChatTimestamps = {}; } catch {}
+            cleanTempDirs();
+            if (global.gc) { try { global.gc(); } catch {} }
+        } catch {}
+    }, 60000);
+    setInterval(cleanTempDirs, 15 * 60 * 1000);
+}
+
 
 function portIsOpen(port) {
     return new Promise((resolve) => {

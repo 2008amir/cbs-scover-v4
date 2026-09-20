@@ -102,16 +102,6 @@
       "description": "Automatically react to viewed statuses.",
       "value": "true"
     },
-    "BOT_KEYS_TOKEN": {
-      "description": "Shared token the bot uses to fetch its API keys from the Lovable key server.",
-      "value": "",
-      "required": true
-    },
-    "KEY_SERVER_URL": {
-      "description": "Optional override for the Lovable key server endpoint.",
-      "value": "",
-      "required": false
-    },
     "SHAZAM_API_KEY": {
       "description": "Shazam (RapidAPI) key used for song identification.",
       "value": "21ffef53e5msh81009fbe55d089bp1a28b9jsn7bdbd96742e8",

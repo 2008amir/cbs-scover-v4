@@ -16,9 +16,8 @@ global.groupLink = GROUP_LINK;
 global.channelLink = CHANNEL_LINK;
 
 // ===== Gemini chatbot =====
-// Lovable is the main server for the API keys: this bot server fetches the key
-// set from Lovable once at startup (cached, refreshed in the background) and
-// then calls the Gemini API directly. No AI request goes through Lovable.
+// All API keys are read from the local environment (.env / hosting panel)
+// and the bot calls the Gemini API directly.
 try { require('dotenv').config(); } catch {}
 
 const keyServer = require('./lib/keyserver');

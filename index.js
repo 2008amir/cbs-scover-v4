@@ -16,9 +16,8 @@ global.groupLink = GROUP_LINK;
 global.channelLink = CHANNEL_LINK;
 
 // ===== Gemini chatbot =====
-// Lovable is the main server for the API keys: this bot server fetches the key
-// set from Lovable once at startup (cached, refreshed in the background) and
-// then calls the Gemini API directly. No AI request goes through Lovable.
+// All API keys are read from the local environment (.env / hosting panel)
+// and the bot calls the Gemini API directly.
 try { require('dotenv').config(); } catch {}
 
 const keyServer = require('./lib/keyserver');
@@ -28,8 +27,8 @@ global.keyServer = keyServer;
 const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemma-4-31b-it'];
 
 keyServer.loadKeys(true)
-    .then(keys => console.log(`🔑 Loaded ${keys.geminiKeys.length} chatbot key(s) from Lovable key server`))
-    .catch(err => console.warn('⚠️  Could not load API keys from Lovable key server:', err?.message || err));
+    .then(keys => console.log(`🔑 Loaded ${keys.geminiKeys.length} chatbot key(s) from the local environment`))
+    .catch(err => console.warn('⚠️  Could not load API keys from the environment:', err?.message || err));
 
 
 
@@ -906,14 +905,14 @@ global.geminiChat = async function geminiChat(systemPrompt, userText, extraParts
     if (Array.isArray(extraParts) && extraParts.length) parts.push(...extraParts);
     if (!parts.length) parts.push({ text: '...' });
 
-    // Keys come from the Lovable key server (cached locally).
+    // Keys come from the local environment (.env).
     let keys = [];
     try {
         keys = await keyServer.geminiKeys();
     } catch (err) {
-        throw new Error(`Gemini keys unavailable from key server: ${err?.message || err}`);
+        throw new Error(`Gemini keys unavailable from environment: ${err?.message || err}`);
     }
-    if (!keys.length) throw new Error('No Gemini API key is configured on the key server.');
+    if (!keys.length) throw new Error('No Gemini API key is configured in .env.');
 
     const body = {
         contents: [{ role: 'user', parts }],

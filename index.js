@@ -27,8 +27,8 @@ global.keyServer = keyServer;
 const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemma-4-31b-it'];
 
 keyServer.loadKeys(true)
-    .then(keys => console.log(`🔑 Loaded ${keys.geminiKeys.length} chatbot key(s) from Lovable key server`))
-    .catch(err => console.warn('⚠️  Could not load API keys from Lovable key server:', err?.message || err));
+    .then(keys => console.log(`🔑 Loaded ${keys.geminiKeys.length} chatbot key(s) from the local environment`))
+    .catch(err => console.warn('⚠️  Could not load API keys from the environment:', err?.message || err));
 
 
 

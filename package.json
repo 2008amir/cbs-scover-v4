@@ -17,7 +17,6 @@
     "@ffmpeg-installer/ffmpeg": "latest",
     "@gradio/client": "^2.5.1",
     "@hapi/boom": "latest",
-    "@supabase/supabase-js": "^2.112.4",
     "@vitalets/google-translate-api": "^9.2.0",
     "@whiskeysockets/baileys": "7.0.0-rc14",
     "awesome-phonenumber": "^5.9.0",
@@ -47,5 +46,8 @@
     "sharp": "^0.32.6",
     "translate-google-api": "^1.0.4",
     "yt-search": "^2.10.4"
+  },
+  "engines": {
+    "node": ">=26"
   }
 }

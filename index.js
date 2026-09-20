@@ -905,14 +905,14 @@ global.geminiChat = async function geminiChat(systemPrompt, userText, extraParts
     if (Array.isArray(extraParts) && extraParts.length) parts.push(...extraParts);
     if (!parts.length) parts.push({ text: '...' });
 
-    // Keys come from the Lovable key server (cached locally).
+    // Keys come from the local environment (.env).
     let keys = [];
     try {
         keys = await keyServer.geminiKeys();
     } catch (err) {
-        throw new Error(`Gemini keys unavailable from key server: ${err?.message || err}`);
+        throw new Error(`Gemini keys unavailable from environment: ${err?.message || err}`);
     }
-    if (!keys.length) throw new Error('No Gemini API key is configured on the key server.');
+    if (!keys.length) throw new Error('No Gemini API key is configured in .env.');
 
     const body = {
         contents: [{ role: 'user', parts }],

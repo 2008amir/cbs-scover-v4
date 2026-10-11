@@ -3063,7 +3063,7 @@ function memoryGuard() {
     setInterval(() => {
         try {
             const rssMb = process.memoryUsage().rss / 1024 / 1024;
-            if (rssMb < 250) return;
+            if (rssMb < 100) return;
             console.log(`🧹 Memory at ${Math.round(rssMb)} MB, trimming caches.`);
             try { global.store?.trim?.(); } catch {}
             try {

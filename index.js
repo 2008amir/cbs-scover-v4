@@ -3063,7 +3063,7 @@ function memoryGuard() {
     setInterval(() => {
         try {
             const rssMb = process.memoryUsage().rss / 1024 / 1024;
-            if (rssMb < 380) return;
+            if (rssMb < 250) return;
             console.log(`🧹 Memory at ${Math.round(rssMb)} MB, trimming caches.`);
             try { global.store?.trim?.(); } catch {}
             try {
@@ -3075,7 +3075,9 @@ function memoryGuard() {
             cleanTempDirs();
             if (global.gc) { try { global.gc(); } catch {} }
         } catch {}
-    }, 60000);
+    }, 30000);
+    // Regular light GC so memory never creeps up to the panel's kill limit.
+    setInterval(() => { if (global.gc) { try { global.gc(); } catch {} } }, 5 * 60 * 1000);
     setInterval(cleanTempDirs, 15 * 60 * 1000);
 }
 

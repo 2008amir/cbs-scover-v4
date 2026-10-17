@@ -1,0 +1,3 @@
+- [ ] Remove disruptive memory clearing and repeated trimming output.
+- [ ] Preserve WhatsApp encryption keys and recover disconnected connections safely.
+- [ ] Run regression checks for long-uptime connection recovery.

@@ -2185,16 +2185,30 @@ global.handleGroupWelcome = async function handleGroupWelcome(EliteProTech, anu)
         const groupDesc = metadata.desc || 'No description available.';
         const channelJid = await global.resolveChannelJid(EliteProTech);
 
-        const getRealJid = (jid) => {
+        // Baileys 7 sends participants as objects ({ id, phoneNumber, admin });
+        // older versions send plain jid strings. Always reduce to a jid string.
+        const toJid = (value) => {
+            if (!value) return '';
+            if (typeof value === 'string') return value;
+            return String(value.phoneNumber || value.jid || value.pn || value.id || value.lid || '');
+        };
+        const getRealJid = (raw) => {
+            const jid = toJid(raw);
+            const pn = typeof raw === 'object' && raw ? toJid(raw.phoneNumber || raw.pn) : '';
+            if (pn && pn.endsWith('@s.whatsapp.net')) return pn;
             for (const p of (metadata.participants || [])) {
-                if (p.id === jid || p.lid === jid || p.jid === jid) return p.jid || p.pn || jid;
+                if (p.id === jid || p.lid === jid || p.jid === jid || p.phoneNumber === jid) {
+                    const real = toJid(p.phoneNumber || p.jid || p.pn || p.id);
+                    if (real) return real;
+                }
             }
             return jid;
         };
 
-        for (const num of (anu.participants || [])) {
-            const realNum = getRealJid(num);
-            const userTag = `@${String(realNum).split('@')[0]}`;
+        for (const rawParticipant of (anu.participants || [])) {
+            const realNum = getRealJid(rawParticipant);
+            if (!realNum || !realNum.includes('@')) continue;
+            const userTag = `@${realNum.split('@')[0]}`;
 
             let ppuser;
             try { ppuser = await EliteProTech.profilePictureUrl(realNum, 'image'); }

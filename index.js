@@ -1,6 +1,8 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { createConnectionHealth } = require('./lib/connection-health');
+global.connectionHealth = createConnectionHealth();
 
 // Separate, isolated internet video knowledge engine. Live chat only ever calls
 // its cache readers (relevantVideoKnowledge) — never its network functions.
@@ -3034,8 +3036,7 @@ process.on('beforeExit', () => console.log('ℹ️ Event loop drained, keeping t
 // never quit on its own after a disconnect.
 setInterval(() => {}, 60000);
 
-/* Memory guard: hosting panels kill processes that keep growing. Trim the
-   in-memory caches and temp files well before the limit is reached. */
+/* Quiet maintenance only; never clear live state based on process RSS. */
 function cleanTempDirs() {
     const dirs = [
         path.join(__dirname, 'database', 'temp'),
@@ -3059,25 +3060,7 @@ function cleanTempDirs() {
     }
 }
 
-function memoryGuard() {
-    setInterval(() => {
-        try {
-            const rssMb = process.memoryUsage().rss / 1024 / 1024;
-            if (rssMb < 100) return;
-            console.log(`🧹 Memory at ${Math.round(rssMb)} MB, trimming caches.`);
-            try { global.store?.trim?.(); } catch {}
-            try {
-                if (global.store?.messages) {
-                    for (const jid of Object.keys(global.store.messages)) delete global.store.messages[jid];
-                }
-            } catch {}
-            try { global.userChats = {}; global.userChatTimestamps = {}; } catch {}
-            cleanTempDirs();
-            if (global.gc) { try { global.gc(); } catch {} }
-        } catch {}
-    }, 30000);
-    // Regular light GC so memory never creeps up to the panel's kill limit.
-    setInterval(() => { if (global.gc) { try { global.gc(); } catch {} } }, 5 * 60 * 1000);
+function startMaintenance() {
     setInterval(cleanTempDirs, 15 * 60 * 1000);
 }
 
@@ -3106,7 +3089,7 @@ function watchPort() {
 async function start() {
     startKeepAlive();
     watchPort();
-    memoryGuard();
+    startMaintenance();
 
     while (true) {
         let source = null;

@@ -17,32 +17,27 @@
       "value": ""
     },
     "GEMINI_API_KEY": {
-      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "description": "Google Gemini chat API key from local environment; unused slots may be blank.",
       "value": "",
       "required": false
     },
     "GEMINI_KEY_2": {
-      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "description": "Google Gemini chat API key from local environment; unused slots may be blank.",
       "value": "",
       "required": false
     },
     "GEMINI_KEY_3": {
-      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "description": "Google Gemini chat API key from local environment; unused slots may be blank.",
       "value": "",
       "required": false
     },
     "GEMINI_KEY_4": {
-      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
-      "value": "",
-      "required": false
-    },
-    "VIDEO_KNOWLEDGE_GEMINI_API_KEY": {
-      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "description": "Google Gemini chat API key from local environment; unused slots may be blank.",
       "value": "",
       "required": false
     },
     "YOUTUBE_API_KEY": {
-      "description": "Optional local fallback only \u2014 keys are normally served by Lovable.",
+      "description": "YouTube Data API v3 key for public video search; enable the API in its Google project.",
       "value": "",
       "required": false
     },
@@ -104,7 +99,7 @@
     },
     "SHAZAM_API_KEY": {
       "description": "Shazam (RapidAPI) key used for song identification.",
-      "value": "21ffef53e5msh81009fbe55d089bp1a28b9jsn7bdbd96742e8",
+      "value": "",
       "required": false
     },
     "HF_TOKEN": {
@@ -115,6 +110,36 @@
     "HF_SPACE": {
       "description": "Hugging Face Space running Seed-VC voice conversion.",
       "value": "Plachta/Seed-VC",
+      "required": false
+    },
+    "GEMINI_KEY_5": {
+      "description": "Google Gemini chat API key from local environment; unused slots may be blank.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_youtube_KEY": {
+      "description": "Separate Gemini key for video metadata analysis only, not YouTube Data API authentication.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_youtube_KEY_2": {
+      "description": "Separate Gemini key for video metadata analysis only, not YouTube Data API authentication.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_youtube_KEY_3": {
+      "description": "Separate Gemini key for video metadata analysis only, not YouTube Data API authentication.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_youtube_KEY_4": {
+      "description": "Separate Gemini key for video metadata analysis only, not YouTube Data API authentication.",
+      "value": "",
+      "required": false
+    },
+    "GEMINI_youtube_KEY_5": {
+      "description": "Separate Gemini key for video metadata analysis only, not YouTube Data API authentication.",
+      "value": "",
       "required": false
     }
   },

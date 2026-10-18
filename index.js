@@ -29,7 +29,7 @@ global.keyServer = keyServer;
 const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemma-4-31b-it'];
 
 keyServer.loadKeys(true)
-    .then(keys => console.log(`🔑 Loaded ${keys.geminiKeys.length} chatbot key(s) from the local environment`))
+    .then(() => console.log('🔑 Local API key configuration loaded'))
     .catch(err => console.warn('⚠️  Could not load API keys from the environment:', err?.message || err));
 
 
@@ -946,16 +946,15 @@ global.geminiChat = async function geminiChat(systemPrompt, userText, extraParts
                 lastError = err;
                 const status = Number(err?.response?.status || 0);
                 const detail = String(err?.response?.data?.error?.message || err?.message || 'unknown error');
-                console.warn(`Gemini: ${model} via key #${i + 1} failed (${status || 'network'}) ${detail}`);
+                console.warn(`Gemini: ${model} request failed (${status || 'network'})`);
                 // Quota / auth problems: rotate to the next key. Bad request for
                 // this model: stop trying keys and move to the next model.
                 if (status === 400 && !/api key/i.test(detail)) break;
             }
         }
     }
-    const detail = lastError?.response?.data?.error?.message || lastError?.message || 'unknown error';
-    console.error('Gemini error (all keys failed):', detail);
-    throw new Error(`Gemini request failed: ${detail}`);
+    const status = Number(lastError?.response?.status || 0);
+    throw new Error(`Gemini request failed (${status || 'network'}); check chat keys, model availability and quota`);
 };
 
 

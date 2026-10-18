@@ -1,3 +1,5 @@
 - [x] Remove disruptive memory clearing and repeated trimming output.
 - [x] Preserve WhatsApp encryption keys and recover disconnected connections safely.
 - [x] Run regression checks for long-uptime connection recovery (six passed; live OptikLink uptime remains unverified).
+- [ ] Separate chat and video Gemini key pools and document .env setup.
+- [ ] Validate Hugging Face configuration and run configuration regression tests.

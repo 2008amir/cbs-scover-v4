@@ -355,7 +355,31 @@ async function padToSquare(buffer) {
     return canvas.resize(640, 640).quality(90).getBufferAsync(Jimp.MIME_JPEG);
 }
 
+// Full view-once messages as they arrive. WhatsApp often strips the media
+// keys from the quoted copy, so recovery uses the original when available.
+const viewOnceCache = new Map();
+const VIEW_ONCE_TTL = 24 * 60 * 60 * 1000;
+function isViewOnce(msg) {
+    if (!msg) return false;
+    if (msg.viewOnceMessage || msg.viewOnceMessageV2 || msg.viewOnceMessageV2Extension) return true;
+    const inner = msg.ephemeralMessage?.message || msg;
+    return ['imageMessage', 'videoMessage', 'audioMessage'].some(k => inner[k]?.viewOnce);
+}
+function rememberViewOnce(m) {
+    try {
+        if (!m?.key?.id || !isViewOnce(m.message)) return;
+        viewOnceCache.set(m.key.id, { message: m.message, key: m.key, at: Date.now() });
+        const cutoff = Date.now() - VIEW_ONCE_TTL;
+        for (const [id, v] of viewOnceCache) if (v.at < cutoff || viewOnceCache.size > 300) viewOnceCache.delete(id); else break;
+    } catch {}
+}
+function resolveViewOnce(q) {
+    const hit = q?.key?.id && viewOnceCache.get(q.key.id);
+    return hit ? { message: hit.message, key: hit.key } : q;
+}
+
 async function sendViewOnceCopy(EliteProTech, q, target, m) {
+    q = resolveViewOnce(q);
     const message = unwrap(q.message);
     const from = String(q.key.participant || m.chat || '').split('@')[0];
     const header = `👁️ *VIEW ONCE RECOVERED*\n👤 From: @${from}\n💬 Chat: ${m.chat}`;
@@ -802,20 +826,30 @@ async function handleExtraCommands(EliteProTech, m) {
 
 
     /* ---------- VIEW ONCE TO DM ---------- */
-    if (command === 'vvdm' || command === 'vv2' || command === 'viewoncedm') {
+    if (['vvdm', 'vv2', 'viewoncedm', 'vv', 'viewonce'].includes(command)) {
+        const toDm = !['vv', 'viewonce'].includes(command);
         const q = quotedInfo(m);
         if (!q) {
-            await reply(`👁️ Reply to a view-once message with *${prefix}vvdm*.`);
+            await reply(`👁️ Reply to a view-once message with *${prefix}${command}*.`);
             return true;
         }
-        try {
-            const target = ownerJid(EliteProTech);
-            await sendViewOnceCopy(EliteProTech, q, target, m);
-            await EliteProTech.sendMessage(m.chat, { text: '✅ View-once media recovered and sent to your DM.' }, { quoted: m });
-        } catch (err) {
-            console.error('vvdm error:', err?.message || err);
-            await reply('❌ Could not recover that view-once message.');
+        let lastErr;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const target = toDm ? ownerJid(EliteProTech) : m.chat;
+                await sendViewOnceCopy(EliteProTech, q, target, m);
+                if (toDm) await EliteProTech.sendMessage(m.chat, { text: '✅ View-once media recovered and sent to your DM.' }, { quoted: m });
+                return true;
+            } catch (err) {
+                lastErr = err;
+                if (String(err?.message).includes('unsupported')) break;
+                await new Promise(r => setTimeout(r, 1500));
+            }
         }
+        console.error(`${command} error:`, lastErr?.message || lastErr);
+        await reply(String(lastErr?.message).includes('unsupported')
+            ? '⚠️ That message is not a view-once photo, video or voice note.'
+            : '❌ Could not recover that view-once. WhatsApp may have expired the media — ask for it to be resent and reply with the command soon after it arrives.');
         return true;
     }
 
@@ -1320,6 +1354,7 @@ let v2Started = false;
 
 module.exports = async (EliteProTech, m, chatUpdate, store) => {
     try {
+        rememberViewOnce(m);
         /* Start the CBS-SCOVER-V2 plugin engine on the same socket, once. */
         if (!v2Started) {
             v2Started = true;

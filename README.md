@@ -48,6 +48,36 @@ DON'T FORGET TO FORK 🍴 & STAR 🌟 OUR REPO🫠
 - Upload SESSION_ID (creds.json) on session folder or add it to your .env file: SESSION_ID=
 - Edit .env to your Choice.
 
+### API configuration (Node.js 22)
+
+The bot loads the repository's `.env` even when launched from another directory.
+Hosting-panel values take precedence. Restart after changing keys; keep your session
+folder. `.env.example` lists blank slots: do not overwrite your existing `.env` with it.
+
+- **Chat:** `GEMINI_API_KEY` and `GEMINI_KEY_2` through `GEMINI_KEY_5`.
+- **Video analysis only:** `GEMINI_youtube_KEY` and `GEMINI_youtube_KEY_2` through
+  `GEMINI_youtube_KEY_5`. Hyphen aliases (`GEMINI_youtube_KEY-2` through `-5`) and
+  legacy uppercase names also work. This pool never borrows chat keys.
+  Move any old `VIDEO_KNOWLEDGE_GEMINI_API_KEY` value to this new pool.
+- **YouTube searches:** `YOUTUBE_API_KEY` with YouTube Data API v3 enabled.
+  Gemini video keys analyse metadata; they are not YouTube search credentials.
+- **Voice conversion:** `HF_TOKEN` from Hugging Face; `HUGGINGFACE_TOKEN` and
+  `HF_API_TOKEN` are accepted aliases. Public Spaces may work without a token,
+  but private Spaces require access and ZeroGPU quotas still apply.
+  `HF_SPACE=Plachta/Seed-VC` selects the default compatible Space; `owner/space`
+  and Hugging Face Space webpage URLs are accepted.
+
+Leave unused slots blank. Never commit `.env` or share credentials. Invalid numeric
+voice settings use safe defaults. Google API enablement, restrictions, billing,
+quota and model availability can still cause provider errors; configuration cannot
+override them. A different Seed-VC Space must offer the same `/predict` schema.
+
+Official references:
+- [Gemini keys](https://ai.google.dev/gemini-api/docs/api-key)
+- [YouTube API setup](https://developers.google.com/youtube/v3/getting-started)
+- [Hugging Face tokens](https://huggingface.co/docs/hub/security-tokens)
+- [Gradio JavaScript client](https://www.gradio.app/docs/js-client)
+
 ---
 
 ## FOR PANEL DEPLOYMENT

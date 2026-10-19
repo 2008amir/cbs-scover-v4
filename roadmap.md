@@ -2,4 +2,5 @@
 - [x] Preserve WhatsApp encryption keys and recover disconnected connections safely.
 - [x] Run regression checks for long-uptime connection recovery (six passed; live OptikLink uptime remains unverified).
 - [x] Separate chat and video Gemini key pools and document .env setup.
+- [ ] Repair .create's missing image endpoint and test generation-to-WhatsApp delivery.
 - [x] Validate Hugging Face configuration: 13 regression tests passed and live Seed-VC /predict schema matches; authenticated provider calls and OptikLink remain unverified.

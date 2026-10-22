@@ -3,5 +3,6 @@
 - [x] Run regression checks for long-uptime connection recovery (six passed; live OptikLink uptime remains unverified).
 - [x] Separate chat and video Gemini key pools and document .env setup.
 - [x] Replace .create's HTTP 404 endpoint with Gemini; 19 tests pass, including mocked image-to-WhatsApp delivery.
+- [x] Give image generation its own .env pool (IMAGE_GEMINI_KEY_1–5) and the Flash 3 image model (gemini-3.1-flash-image); 24 tests pass.
 - [ ] Verify .create in live WhatsApp on OptikLink: blocked by local Gemini keys being rejected; valid image-enabled credentials and deployment are required.
 - [x] Validate Hugging Face configuration: 13 regression tests passed and live Seed-VC /predict schema matches; authenticated provider calls and OptikLink remain unverified.

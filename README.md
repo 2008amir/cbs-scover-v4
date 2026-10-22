@@ -55,6 +55,10 @@ Hosting-panel values take precedence. Restart after changing keys; keep your ses
 folder. `.env.example` lists blank slots: do not overwrite your existing `.env` with it.
 
 - **Chat:** `GEMINI_API_KEY` and `GEMINI_KEY_2` through `GEMINI_KEY_5`.
+- **Image generation:** `IMAGE_GEMINI_KEY_1` through `IMAGE_GEMINI_KEY_5`
+  (`IMAGE_GEMINI_KEY` is accepted as slot 1). This pool is separate from chat and
+  video keys and never borrows them. `IMAGE_GEMINI_MODEL` overrides the model id
+  (default: `gemini-3.1-flash-image`, the Flash 3 image model).
 - **Video analysis only:** `GEMINI_youtube_KEY` and `GEMINI_youtube_KEY_2` through
   `GEMINI_youtube_KEY_5`. Hyphen aliases (`GEMINI_youtube_KEY-2` through `-5`) and
   legacy uppercase names also work. This pool never borrows chat keys.

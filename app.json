@@ -141,6 +141,36 @@
       "description": "Separate Gemini key for video metadata analysis only, not YouTube Data API authentication.",
       "value": "",
       "required": false
+    },
+    "IMAGE_GEMINI_KEY_1": {
+      "description": "Dedicated Gemini key for image generation only; unused slots may be blank.",
+      "value": "",
+      "required": false
+    },
+    "IMAGE_GEMINI_KEY_2": {
+      "description": "Dedicated Gemini key for image generation only; unused slots may be blank.",
+      "value": "",
+      "required": false
+    },
+    "IMAGE_GEMINI_KEY_3": {
+      "description": "Dedicated Gemini key for image generation only; unused slots may be blank.",
+      "value": "",
+      "required": false
+    },
+    "IMAGE_GEMINI_KEY_4": {
+      "description": "Dedicated Gemini key for image generation only; unused slots may be blank.",
+      "value": "",
+      "required": false
+    },
+    "IMAGE_GEMINI_KEY_5": {
+      "description": "Dedicated Gemini key for image generation only; unused slots may be blank.",
+      "value": "",
+      "required": false
+    },
+    "IMAGE_GEMINI_MODEL": {
+      "description": "Image generation model id (default: gemini-3.1-flash-image).",
+      "value": "gemini-3.1-flash-image",
+      "required": false
     }
   },
   "buildpacks": [

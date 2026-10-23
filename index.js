@@ -269,6 +269,7 @@ global.observeUser = function observeUser(sender, text) {
     if (!sender || !clean) return;
     learnStyle(sender, clean);
     rememberFacts(sender, clean);
+    maintenance.boundLearning(global.chatStyle, global.chatFacts);
 };
 
 
@@ -731,6 +732,7 @@ global.logChatMessage = function logChatMessage(chatJid, who, text) {
     if (list[list.length - 1] === line) return;
     list.push(line);
     while (list.length > 400) list.shift();
+    maintenance.boundChatArchive(global.chatArchive);
     saveArchive();
 };
 
@@ -3081,6 +3083,11 @@ function cleanTempDirs() {
 
 function startMaintenance() {
     setInterval(cleanTempDirs, 15 * 60 * 1000);
+    // Quietly re-apply the hard caps to every long-lived memory structure.
+    setInterval(() => {
+        try { maintenance.boundChatArchive(global.chatArchive); } catch {}
+        try { maintenance.boundLearning(global.chatStyle, global.chatFacts); } catch {}
+    }, 30 * 60 * 1000);
 }
 
 

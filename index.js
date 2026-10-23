@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { createConnectionHealth } = require('./lib/connection-health');
+const maintenance = require('./lib/maintenance');
 global.connectionHealth = createConnectionHealth();
 
 // Separate, isolated internet video knowledge engine. Live chat only ever calls
@@ -704,13 +705,18 @@ ${emojiBlock('normal')}`;
    conversation, the names they call each other and the last thing that was
    said before it took over. */
 global.chatArchive = global.chatArchive || readJsonSafe(CHATLOG_FILE, {}) || {};
+// Old deployments can carry a huge archive on disk; cap it before anything
+// builds on it, so a redeploy cannot spike memory at startup.
+maintenance.boundChatArchive(global.chatArchive);
 let archiveSaveTimer = null;
 function saveArchive() {
     if (archiveSaveTimer) return;
     archiveSaveTimer = setTimeout(() => {
         archiveSaveTimer = null;
         try {
-            fs.writeFileSync(CHATLOG_FILE, JSON.stringify(global.chatArchive, null, 2));
+            // Compact JSON: pretty-printing roughly doubles both the file and
+            // the transient stringify memory on every save.
+            fs.writeFileSync(CHATLOG_FILE, JSON.stringify(global.chatArchive));
         } catch (err) {
             console.log('chat archive save failed:', err?.message || err);
         }

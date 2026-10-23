@@ -1743,14 +1743,13 @@ const DELETED_CONTEXT = {
     isForwarded: true
 };
 
-/* ===== ANTI-DELETE MESSAGE MEMORY (3 DAYS) =====
-   Every incoming and outgoing message is kept on disk for 3 days, so a
-   message deleted long after it was sent (e.g. 2 days later, including
-   "delete for everyone" on your own message) can still be recovered.
-   Anything older than 3 days is purged automatically. */
+/* ===== ANTI-DELETE MESSAGE MEMORY =====
+   Messages are kept on disk only for as long as recovery needs them:
+   24 hours in private chats, 1 hour in groups. Anything older is purged
+   automatically by that retention policy. */
 
 const ANTIDELETE_STORE_DIR = path.join(__dirname, 'database', 'antidelete_store');
-const ANTIDELETE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+const antideleteTtl = maintenance.antideleteTtl;
 let lastAntiDeletePurge = 0;
 
 function antiDeleteFile(remoteJid, msgId) {
@@ -1767,10 +1766,14 @@ global.purgeAntiDeleteStore = function purgeAntiDeleteStore(force = false) {
         for (const name of fs.readdirSync(ANTIDELETE_STORE_DIR)) {
             const full = path.join(ANTIDELETE_STORE_DIR, name);
             try {
-                let ts = 0;
-                try { ts = Number(JSON.parse(fs.readFileSync(full, 'utf8'))?._ts) || 0; } catch {}
+                let ts = 0, jid = '';
+                try {
+                    const parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
+                    ts = Number(parsed?._ts) || 0;
+                    jid = parsed?.key?.remoteJid || '';
+                } catch {}
                 if (!ts) ts = fs.statSync(full).mtimeMs;
-                if (now - ts > ANTIDELETE_TTL_MS) {
+                if (now - ts > antideleteTtl(jid)) {
                     fs.unlinkSync(full);
                     removed++;
                 }
@@ -1832,7 +1835,7 @@ global.antiDeleteLoad = function antiDeleteLoad(remoteJid, msgId) {
 
         if (!data?.message) return null;
         const ts = Number(data._ts) || 0;
-        if (ts && Date.now() - ts > ANTIDELETE_TTL_MS) return null;
+        if (ts && Date.now() - ts > antideleteTtl(remoteJid)) return null;
         return data;
     } catch {
         return null;

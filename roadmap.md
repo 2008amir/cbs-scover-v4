@@ -1,3 +1,5 @@
+- [x] Cap every long-lived memory structure (chat archive, learned people, connect chat list) and restore 24h/1h anti-delete retention to the index-side store; 29 tests pass. Live OptikLink redeploy uptime remains unverified.
+- [ ] Verify the bot survives >24h and >5 days on OptikLink after redeploy with `npm start`; if it dies again, capture the console text at the moment it stops.
 - [x] Remove disruptive memory clearing and repeated trimming output.
 - [x] Preserve WhatsApp encryption keys and recover disconnected connections safely.
 - [x] Run regression checks for long-uptime connection recovery (six passed; live OptikLink uptime remains unverified).

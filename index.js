@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { createConnectionHealth } = require('./lib/connection-health');
+const maintenance = require('./lib/maintenance');
 global.connectionHealth = createConnectionHealth();
 
 // Separate, isolated internet video knowledge engine. Live chat only ever calls
@@ -268,6 +269,7 @@ global.observeUser = function observeUser(sender, text) {
     if (!sender || !clean) return;
     learnStyle(sender, clean);
     rememberFacts(sender, clean);
+    maintenance.boundLearning(global.chatStyle, global.chatFacts);
 };
 
 
@@ -704,13 +706,18 @@ ${emojiBlock('normal')}`;
    conversation, the names they call each other and the last thing that was
    said before it took over. */
 global.chatArchive = global.chatArchive || readJsonSafe(CHATLOG_FILE, {}) || {};
+// Old deployments can carry a huge archive on disk; cap it before anything
+// builds on it, so a redeploy cannot spike memory at startup.
+maintenance.boundChatArchive(global.chatArchive);
 let archiveSaveTimer = null;
 function saveArchive() {
     if (archiveSaveTimer) return;
     archiveSaveTimer = setTimeout(() => {
         archiveSaveTimer = null;
         try {
-            fs.writeFileSync(CHATLOG_FILE, JSON.stringify(global.chatArchive, null, 2));
+            // Compact JSON: pretty-printing roughly doubles both the file and
+            // the transient stringify memory on every save.
+            fs.writeFileSync(CHATLOG_FILE, JSON.stringify(global.chatArchive));
         } catch (err) {
             console.log('chat archive save failed:', err?.message || err);
         }
@@ -725,6 +732,7 @@ global.logChatMessage = function logChatMessage(chatJid, who, text) {
     if (list[list.length - 1] === line) return;
     list.push(line);
     while (list.length > 400) list.shift();
+    maintenance.boundChatArchive(global.chatArchive);
     saveArchive();
 };
 
@@ -1735,14 +1743,13 @@ const DELETED_CONTEXT = {
     isForwarded: true
 };
 
-/* ===== ANTI-DELETE MESSAGE MEMORY (3 DAYS) =====
-   Every incoming and outgoing message is kept on disk for 3 days, so a
-   message deleted long after it was sent (e.g. 2 days later, including
-   "delete for everyone" on your own message) can still be recovered.
-   Anything older than 3 days is purged automatically. */
+/* ===== ANTI-DELETE MESSAGE MEMORY =====
+   Messages are kept on disk only for as long as recovery needs them:
+   24 hours in private chats, 1 hour in groups. Anything older is purged
+   automatically by that retention policy. */
 
 const ANTIDELETE_STORE_DIR = path.join(__dirname, 'database', 'antidelete_store');
-const ANTIDELETE_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+const antideleteTtl = maintenance.antideleteTtl;
 let lastAntiDeletePurge = 0;
 
 function antiDeleteFile(remoteJid, msgId) {
@@ -1759,10 +1766,14 @@ global.purgeAntiDeleteStore = function purgeAntiDeleteStore(force = false) {
         for (const name of fs.readdirSync(ANTIDELETE_STORE_DIR)) {
             const full = path.join(ANTIDELETE_STORE_DIR, name);
             try {
-                let ts = 0;
-                try { ts = Number(JSON.parse(fs.readFileSync(full, 'utf8'))?._ts) || 0; } catch {}
+                let ts = 0, jid = '';
+                try {
+                    const parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
+                    ts = Number(parsed?._ts) || 0;
+                    jid = parsed?.key?.remoteJid || '';
+                } catch {}
                 if (!ts) ts = fs.statSync(full).mtimeMs;
-                if (now - ts > ANTIDELETE_TTL_MS) {
+                if (now - ts > antideleteTtl(jid)) {
                     fs.unlinkSync(full);
                     removed++;
                 }
@@ -1824,15 +1835,15 @@ global.antiDeleteLoad = function antiDeleteLoad(remoteJid, msgId) {
 
         if (!data?.message) return null;
         const ts = Number(data._ts) || 0;
-        if (ts && Date.now() - ts > ANTIDELETE_TTL_MS) return null;
+        if (ts && Date.now() - ts > antideleteTtl(remoteJid)) return null;
         return data;
     } catch {
         return null;
     }
 };
 
-// Deletions are only forgotten by the 3-day purge, never right after a
-// restore, so repeated deletes of the same old message still recover.
+// Deletions are only forgotten by the retention purge (24h private / 1h
+// groups), never right after a restore, so repeated deletes of the same old
 global.antiDeleteForget = function antiDeleteForget() { return true; };
 
 /* ===== WHO DELETED IT =====
@@ -3075,6 +3086,11 @@ function cleanTempDirs() {
 
 function startMaintenance() {
     setInterval(cleanTempDirs, 15 * 60 * 1000);
+    // Quietly re-apply the hard caps to every long-lived memory structure.
+    setInterval(() => {
+        try { maintenance.boundChatArchive(global.chatArchive); } catch {}
+        try { maintenance.boundLearning(global.chatStyle, global.chatFacts); } catch {}
+    }, 30 * 60 * 1000);
 }
 
 

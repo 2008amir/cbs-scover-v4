@@ -1842,8 +1842,8 @@ global.antiDeleteLoad = function antiDeleteLoad(remoteJid, msgId) {
     }
 };
 
-// Deletions are only forgotten by the 3-day purge, never right after a
-// restore, so repeated deletes of the same old message still recover.
+// Deletions are only forgotten by the retention purge (24h private / 1h
+// groups), never right after a restore, so repeated deletes of the same old
 global.antiDeleteForget = function antiDeleteForget() { return true; };
 
 /* ===== WHO DELETED IT =====
